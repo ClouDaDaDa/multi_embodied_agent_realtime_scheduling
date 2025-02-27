@@ -1,0 +1,199 @@
+import pickle
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+import matplotlib.cm as cm
+from local_realtime_scheduling.InterfaceWithGlobal.divide_global_schedule_to_local_from_pkl import LocalSchedule, Local_Job_schedule
+
+plt.rcParams['font.family'] = 'Times New Roman'
+plt.rcParams['mathtext.fontset'] = 'stix'
+plt.rcParams['font.size'] = 13  # Default font size
+plt.rcParams['axes.titlesize'] = 14    # Title font size
+# plt.rcParams['axes.labelsize'] = 13    # Axis label font size
+plt.rcParams['xtick.labelsize'] = 13   # x-axis tick label font size
+plt.rcParams['ytick.labelsize'] = 14   # y-axis tick label font size
+plt.rcParams['legend.fontsize'] = 14   # Legend font size
+
+
+def plot_local_gantt(local_schedule):
+    """
+    Plot a Gantt chart with operations colored by their assigned resources (e.g., machines or transbots).
+
+    Args:
+        local_schedule (LocalSchedule): The local schedule containing jobs and operations.
+    """
+    # Generate unique colors for resources using a colormap
+    resource_ids = set(
+        f"Machine {operation.machine_assigned}" if operation.type == "Processing"
+        else f"Transbot {operation.transbot_assigned}"
+        for job in local_schedule.jobs.values() for operation in job.operations.values()
+    )
+    num_resources = len(resource_ids)
+    colormap = plt.colormaps["tab20"] if num_resources <= 20 else cm.get_cmap("hsv", num_resources)
+    resource_color_map = {resource: colormap(i / num_resources) for i, resource in enumerate(sorted(resource_ids))}
+
+    time_window = [local_schedule.time_window_start, local_schedule.time_window_end]
+
+    # Collect all end times to determine x-axis range
+    max_end_time = time_window[1]
+    for job in local_schedule.jobs.values():
+        for operation in job.operations.values():
+            max_end_time = max(max_end_time, operation.estimated_end_time)
+
+    # Create the Gantt chart
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    yticks = []
+    yticklabels = []
+
+    for idx, job in local_schedule.jobs.items():
+        yticks.append(idx)
+        yticklabels.append(f"Job {job.job_id}")
+
+        for operation in job.operations.values():
+            # Determine the resource and color
+            if operation.type == "Processing":
+                resource = f"Machine {operation.machine_assigned}"
+            else:
+                resource = f"Transbot {operation.transbot_assigned}"
+            color = resource_color_map[resource]
+
+            start_time = operation.estimated_start_time
+            duration = operation.estimated_duration
+
+            # Plot a rectangle for the operation
+            ax.barh(idx, duration, left=start_time, color=color, edgecolor="white", align="center")
+
+    # Configure axes
+    ax.set_xlim(time_window[0], max_end_time)
+    ax.set_ylim(-0.5, len(local_schedule.jobs) - 0.5)
+    ax.set_xlabel("Time")
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticklabels)
+    ax.set_title("Local Schedule Gantt Chart by Resource")
+
+    # Add a red dashed line at the end of the time window
+    ax.axvline(x=time_window[1], color="red", linestyle="--", linewidth=2, label="Time Window End")
+
+    # Create a legend for the resources
+    legend_patches = [Patch(color=color, label=resource) for resource, color in resource_color_map.items()]
+    ax.legend(handles=legend_patches, title="Resources", loc="upper right", bbox_to_anchor=(1.15, 1))
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_local_gantt_by_resource(local_schedule):
+    """
+    Plot a Gantt chart with the y-axis representing manufacturing resources (e.g., machines or transbots),
+    sorted by resource type and ID (e.g., Transbot 0, Transbot 1, ..., Machine 0, Machine 1, ...).
+
+    Args:
+        local_schedule (LocalSchedule): The local schedule containing jobs and operations.
+    """
+
+    # Generate unique colors for jobs using a colormap
+    unique_job_ids = set(operation.job_id for job in local_schedule.jobs.values() for operation in job.operations.values())
+    num_jobs = len(unique_job_ids)
+    if num_jobs <= 20:
+        # Use a predefined colormap if the number of jobs is small
+        colormap = plt.colormaps["tab20"]
+        # job_color_map = {job_id: colormap(i / 20) for i, job_id in enumerate(unique_job_ids)}
+        job_color_map = {job_id: colormap(job_id / 20) for i, job_id in enumerate(unique_job_ids)}
+    else:
+        # Dynamically generate colors if the number of jobs exceeds 20
+        colors = cm.get_cmap("hsv", num_jobs)
+        job_color_map = {job_id: colors(i / num_jobs) for i, job_id in enumerate(unique_job_ids)}
+
+    # Group operations by resource
+    resource_operations = {}
+    for job in local_schedule.jobs.values():
+        for operation in job.operations.values():
+            if operation.type == "Processing":
+                resource = f"Machine {operation.machine_assigned}"
+            else:
+                resource = f"Transbot {operation.transbot_assigned}"
+            if resource not in resource_operations:
+                resource_operations[resource] = []
+            resource_operations[resource].append(operation)
+
+    # Sort resources by type and ID
+    sorted_resources = sorted(
+        resource_operations.keys(),
+        key=lambda x: (x.split()[0], int(x.split()[1]))
+    )
+
+    # Collect all end times to determine x-axis range
+    max_end_time = local_schedule.time_window_end
+    for job in local_schedule.jobs.values():
+        for operation in job.operations.values():
+            max_end_time = max(max_end_time, operation.estimated_end_time)
+
+    # Create the Gantt chart
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    yticks = []
+    yticklabels = []
+
+    # Plot each resource's operations
+    for idx, resource in enumerate(sorted_resources):
+        yticks.append(idx)
+        yticklabels.append(resource)
+
+        operations = resource_operations[resource]
+        for operation in operations:
+            start_time = operation.estimated_start_time
+            end_time = operation.estimated_end_time
+            duration = end_time - start_time
+            job_id = operation.job_id
+            color = job_color_map[job_id]
+
+            # Plot a rectangle for the operation
+            ax.barh(idx, duration, left=start_time, color=color, edgecolor="white", align="center")
+            # ax.barh(idx, duration, left=start_time, color=color, edgecolor=color, align="center")
+
+    # Configure axes
+    ax.set_xlim(local_schedule.time_window_start, max_end_time)
+    ax.set_ylim(-0.5, len(sorted_resources) - 0.5)
+    ax.set_xlabel("Time")
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticklabels)
+    ax.set_title("Local Schedule Gantt Chart by Resource")
+
+    # Add a red dashed line at the end of the time window
+    ax.axvline(x=local_schedule.time_window_end, color="red", linestyle="--", linewidth=2, label="Time Window End")
+
+    # Create a legend for the jobs
+    legend_patches = [Patch(color=color, label=f"Job {job_id}") for job_id, color in job_color_map.items()]
+    ax.legend(handles=legend_patches, title="Jobs", loc="upper right", bbox_to_anchor=(1.15, 1))
+
+    current_ticks = list(plt.xticks()[0])
+    current_labels = list(plt.xticks()[1])
+
+    current_ticks.append(max_end_time)
+    current_labels.append(str(int(max_end_time)))
+
+    plt.xticks(current_ticks, current_labels)
+
+    plt.xlim(local_schedule.time_window_start, max_end_time * 1.02)
+
+    plt.tight_layout()
+    plt.show()
+
+
+# Example usage
+if __name__ == "__main__":
+    from configs import dfjspt_params
+    import os
+
+    # Load the LocalSchedule from the pkl file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    local_schedule_file = os.path.dirname(current_dir) + \
+                          "/InterfaceWithGlobal/local_schedules/local_schedule_" + \
+                          f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
+                          + f"I0_window{dfjspt_params.time_window_size}/window_0.pkl"
+
+    with open(local_schedule_file,
+              "rb") as file:
+        local_schedule = pickle.load(file)
+    # plot_local_gantt_by_resource(local_schedule)
+    plot_local_gantt(local_schedule)
