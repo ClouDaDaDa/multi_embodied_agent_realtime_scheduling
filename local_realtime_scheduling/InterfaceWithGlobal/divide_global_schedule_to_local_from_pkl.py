@@ -50,21 +50,22 @@ def divide_schedule_into_time_windows(
             # Check if the job should be included in this time window
             relevant_job = None
             for operation in job.operations:
-                if operation.estimated_start_time < end_time and operation.estimated_end_time >= start_time:
+                if operation.scheduled_start_processing_time < end_time \
+                        and operation.scheduled_finish_processing_time >= start_time:
                     # If the job is not in the local schedule, add it
                     if relevant_job is None:
                         relevant_job = Local_Job_schedule(job_id=job.job_id)
-                        if operation.estimated_start_time >= start_time:
+                        if operation.scheduled_start_processing_time >= start_time:
                             relevant_job.available_time = start_time
                         else:
-                            relevant_job.available_time = operation.estimated_end_time
+                            relevant_job.available_time = operation.scheduled_finish_processing_time
                         local_schedule.add_job(relevant_job)
                     # Add the operation to the relevant job
                     relevant_job.add_operation(operation)
-                    if operation.estimated_end_time > local_schedule.local_makespan:
-                        local_schedule.local_makespan = operation.estimated_end_time
+                    if operation.scheduled_finish_processing_time > local_schedule.local_makespan:
+                        local_schedule.local_makespan = operation.scheduled_finish_processing_time
             if relevant_job is not None:
-                relevant_job.estimated_finish_time = max(op.estimated_end_time for _, op in relevant_job.operations.items())
+                relevant_job.estimated_finish_time = max(op.scheduled_finish_processing_time for _, op in relevant_job.operations.items())
         local_schedules.append(local_schedule)
 
     return local_schedules

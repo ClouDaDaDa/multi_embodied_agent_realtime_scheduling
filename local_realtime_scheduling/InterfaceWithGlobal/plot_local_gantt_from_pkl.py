@@ -22,11 +22,23 @@ def plot_local_gantt(local_schedule):
         local_schedule (LocalSchedule): The local schedule containing jobs and operations.
     """
     # Generate unique colors for resources using a colormap
-    resource_ids = set(
-        f"Machine {operation.machine_assigned}" if operation.type == "Processing"
-        else f"Transbot {operation.transbot_assigned}"
-        for job in local_schedule.jobs.values() for operation in job.operations.values()
+    machine_resource_ids = set(
+        f"Machine {operation.assigned_machine}"
+        for job in local_schedule.jobs.values()
+        for operation in job.operations.values()
     )
+    transbot_resource_ids = set(
+        f"Transbot {operation.assigned_transbot}"
+        for job in local_schedule.jobs.values()
+        for operation in job.operations.values()
+        if operation.assigned_transbot is not None
+    )
+    resource_ids = machine_resource_ids | transbot_resource_ids
+    # resource_ids = set(
+    #     f"Machine {operation.machine_assigned}" if operation.type == "Processing"
+    #     else f"Transbot {operation.transbot_assigned}"
+    #     for job in local_schedule.jobs.values() for operation in job.operations.values()
+    # )
     num_resources = len(resource_ids)
     colormap = plt.colormaps["tab20"] if num_resources <= 20 else cm.get_cmap("hsv", num_resources)
     resource_color_map = {resource: colormap(i / num_resources) for i, resource in enumerate(sorted(resource_ids))}
@@ -37,7 +49,7 @@ def plot_local_gantt(local_schedule):
     max_end_time = time_window[1]
     for job in local_schedule.jobs.values():
         for operation in job.operations.values():
-            max_end_time = max(max_end_time, operation.estimated_end_time)
+            max_end_time = max(max_end_time, operation.scheduled_finish_processing_time)
 
     # Create the Gantt chart
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -51,17 +63,22 @@ def plot_local_gantt(local_schedule):
 
         for operation in job.operations.values():
             # Determine the resource and color
-            if operation.type == "Processing":
-                resource = f"Machine {operation.machine_assigned}"
-            else:
-                resource = f"Transbot {operation.transbot_assigned}"
-            color = resource_color_map[resource]
-
-            start_time = operation.estimated_start_time
-            duration = operation.estimated_duration
-
+            machine_resource = f"Machine {operation.assigned_machine}"
+            machine_color = resource_color_map[machine_resource]
+            start_processing_time = operation.scheduled_start_processing_time
+            processing_duration = operation.scheduled_finish_processing_time - operation.scheduled_start_processing_time
             # Plot a rectangle for the operation
-            ax.barh(idx, duration, left=start_time, color=color, edgecolor="white", align="center")
+            ax.barh(idx, processing_duration, left=start_processing_time, color=machine_color,
+                    edgecolor="white", align="center")
+
+            if operation.assigned_transbot is not None:
+                transbot_resource = f"Transbot {operation.assigned_transbot}"
+                transbot_color = resource_color_map[transbot_resource]
+                start_transporting_time = operation.scheduled_start_transporting_time
+                transporting_duration = operation.scheduled_finish_transporting_time - operation.scheduled_start_transporting_time
+                # Plot a rectangle for the operation
+                ax.barh(idx, transporting_duration, left=start_transporting_time, color=transbot_color,
+                        edgecolor="white", align="center")
 
     # Configure axes
     ax.set_xlim(time_window[0], max_end_time)
@@ -69,7 +86,7 @@ def plot_local_gantt(local_schedule):
     ax.set_xlabel("Time")
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticklabels)
-    ax.set_title("Local Schedule Gantt Chart by Resource")
+    ax.set_title("Local Schedule Gantt Chart")
 
     # Add a red dashed line at the end of the time window
     ax.axvline(x=time_window[1], color="red", linestyle="--", linewidth=2, label="Time Window End")
@@ -108,13 +125,26 @@ def plot_local_gantt_by_resource(local_schedule):
     resource_operations = {}
     for job in local_schedule.jobs.values():
         for operation in job.operations.values():
-            if operation.type == "Processing":
-                resource = f"Machine {operation.machine_assigned}"
-            else:
-                resource = f"Transbot {operation.transbot_assigned}"
-            if resource not in resource_operations:
-                resource_operations[resource] = []
-            resource_operations[resource].append(operation)
+
+            if operation.assigned_transbot is not None:
+                transbot_resource = f"Transbot {operation.assigned_transbot}"
+                if transbot_resource not in resource_operations:
+                    resource_operations[transbot_resource] = []
+                resource_operations[transbot_resource].append(operation)
+
+            if operation.assigned_machine is not None:
+                machine_resource = f"Machine {operation.assigned_machine}"
+                if machine_resource not in resource_operations:
+                    resource_operations[machine_resource] = []
+                resource_operations[machine_resource].append(operation)
+
+            # if operation.type == "Processing":
+            #     resource = f"Machine {operation.machine_assigned}"
+            # else:
+            #     resource = f"Transbot {operation.transbot_assigned}"
+            # if resource not in resource_operations:
+            #     resource_operations[resource] = []
+            # resource_operations[resource].append(operation)
 
     # Sort resources by type and ID
     sorted_resources = sorted(
@@ -126,7 +156,7 @@ def plot_local_gantt_by_resource(local_schedule):
     max_end_time = local_schedule.time_window_end
     for job in local_schedule.jobs.values():
         for operation in job.operations.values():
-            max_end_time = max(max_end_time, operation.estimated_end_time)
+            max_end_time = max(max_end_time, operation.scheduled_finish_processing_time)
 
     # Create the Gantt chart
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -141,15 +171,25 @@ def plot_local_gantt_by_resource(local_schedule):
 
         operations = resource_operations[resource]
         for operation in operations:
-            start_time = operation.estimated_start_time
-            end_time = operation.estimated_end_time
-            duration = end_time - start_time
             job_id = operation.job_id
             color = job_color_map[job_id]
 
+            start_processing_time = operation.scheduled_start_processing_time
+            end_processing_time = operation.scheduled_finish_processing_time
+            processing_duration = end_processing_time - start_processing_time
+
             # Plot a rectangle for the operation
-            ax.barh(idx, duration, left=start_time, color=color, edgecolor="white", align="center")
+            ax.barh(idx, processing_duration, left=start_processing_time, color=color, edgecolor="white", align="center")
             # ax.barh(idx, duration, left=start_time, color=color, edgecolor=color, align="center")
+
+            if operation.assigned_transbot is not None:
+                start_transporting_time = operation.scheduled_start_transporting_time
+                end_transporting_time = operation.scheduled_finish_transporting_time
+                transporting_duration = end_transporting_time - start_transporting_time
+
+                # Plot a rectangle for the operation
+                ax.barh(idx, transporting_duration, left=start_transporting_time, color=color, edgecolor="white",
+                        align="center")
 
     # Configure axes
     ax.set_xlim(local_schedule.time_window_start, max_end_time)
@@ -195,5 +235,5 @@ if __name__ == "__main__":
     with open(local_schedule_file,
               "rb") as file:
         local_schedule = pickle.load(file)
-    # plot_local_gantt_by_resource(local_schedule)
+    plot_local_gantt_by_resource(local_schedule)
     plot_local_gantt(local_schedule)

@@ -54,14 +54,14 @@ if __name__ == "__main__":
             env_config=env_config,
         )
         .env_runners(
-            num_env_runners=5,
+            num_env_runners=1,
             batch_mode="complete_episodes",
         )
         .training(
             train_batch_size_per_learner=train_batch_size,
         )
         .learners(
-            num_learners=2,
+            num_learners=1,
             num_cpus_per_learner=1,
             num_gpus_per_learner=0,
         )

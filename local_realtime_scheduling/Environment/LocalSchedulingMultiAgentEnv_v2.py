@@ -120,6 +120,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.terminateds = set()
         self.truncateds = set()
         self.resetted = False
+        self.rewards = {}
 
         # Define observation and action spaces for each agent type
         self.observation_spaces = {}
@@ -358,7 +359,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.max_operations = max(job.operations_matrix.shape[0] for job in self.scheduling_instance.jobs)
         self.MAX_MAINTENANCE_COUNTS = sum(job.num_total_processing_operations for job in self.scheduling_instance.jobs)
         self.initial_estimated_makespan = self.local_schedule.local_makespan
-        self.time_upper_bound = self.initial_estimated_makespan * 2
+        self.time_upper_bound = self.initial_estimated_makespan * 5
         self.current_time_before_step = self.local_schedule.time_window_start
         self.current_time_after_step = self.local_schedule.time_window_start
         self.reward_this_step = 0.0
@@ -399,19 +400,19 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
             for operation_id in local_schedule_job.operations:
                 local_schedule_job_operation = local_schedule_job.operations[operation_id]
 
-                if local_schedule_job_operation.type == "Processing":
-                    self.local_result.jobs[job_id].add_operation_result(Operation_result(
-                        job_id=job_id,
-                        operation_id=operation_id,
-                        # actual_start_transporting_time=None,
-                        # actual_finish_transporting_time=None,
-                        # assigned_transbot=None,
-                        # actual_start_processing_time=None,
-                        # actual_finish_processing_time=None,
-                        # assigned_machine=None,
-                    ))
-                    this_job.processing_operations_for_current_time_window.append(int(operation_id))
-                    self.factory_instance.machines[local_schedule_job_operation.machine_assigned].processing_tasks_queue_for_current_time_window.append((job_id, operation_id))
+                # if local_schedule_job_operation.type == "Processing":
+                self.local_result.jobs[job_id].add_operation_result(Operation_result(
+                    job_id=job_id,
+                    operation_id=operation_id,
+                    # actual_start_transporting_time=None,
+                    # actual_finish_transporting_time=None,
+                    # assigned_transbot=None,
+                    # actual_start_processing_time=None,
+                    # actual_finish_processing_time=None,
+                    # assigned_machine=None,
+                ))
+                this_job.processing_operations_for_current_time_window.append(int(operation_id))
+                self.factory_instance.machines[local_schedule_job_operation.assigned_machine].processing_tasks_queue_for_current_time_window.append((job_id, operation_id))
 
             if len(this_job.processing_operations_for_current_time_window) > 0:
                 this_job.current_processing_operation = this_job.processing_operations_for_current_time_window[0]
@@ -428,7 +429,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         return observations, infos
 
     def step(self, action_dict):
-        observations, rewards, terminated, truncated, infos = {}, {}, {}, {}, {}
+        observations, self.rewards, terminated, truncated, infos = {}, {}, {}, {}, {}
         self.reward_this_step = 0.0
         self.resetted = False
 
@@ -581,22 +582,24 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
             self.reward_this_step -= 1.0 / self.initial_estimated_makespan
 
             for machine_agent_id in self.machine_agents:
+                self.rewards[machine_agent_id] = 0.0
                 # Each machine moves forward for 1 time step
                 machine_index = int(machine_agent_id.lstrip("machine"))
                 self._step_a_machine_for_one_step(machine_index=machine_index)
 
             for transbot_agent_id in self.transbot_agents:
+                self.rewards[transbot_agent_id] = 0.0
                 # Each transbot moves forward for 1 time step
                 transbot_index = int(transbot_agent_id.lstrip("transbot"))
                 self._step_a_transbot_for_one_step(transbot_index=transbot_index)
 
             for machine_agent_id in self.machine_agents:
                 # Machines get new rewards:
-                rewards[machine_agent_id] = self.reward_this_step
+                self.rewards[machine_agent_id] += self.reward_this_step
                 terminated[machine_agent_id] = self._check_done()
                 if terminated[machine_agent_id]:
                     self.terminateds.add(machine_agent_id)
-                    rewards[machine_agent_id] += 1.0
+                    self.rewards[machine_agent_id] += 1.0
                     observations[machine_agent_id] = self._get_machine_obs(machine_agent_id=machine_agent_id)
                 truncated[machine_agent_id] = self._check_truncated()
                 if truncated[machine_agent_id]:
@@ -605,11 +608,11 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
 
             for transbot_agent_id in self.transbot_agents:
                 # Transbots get new rewards:
-                rewards[transbot_agent_id] = self.reward_this_step
+                self.rewards[transbot_agent_id] += self.reward_this_step
                 terminated[transbot_agent_id] = self._check_done()
                 if terminated[transbot_agent_id]:
                     self.terminateds.add(transbot_agent_id)
-                    rewards[transbot_agent_id] += 1.0
+                    self.rewards[transbot_agent_id] += 1.0
                     observations[transbot_agent_id] = self._get_transbot_obs(transbot_agent_id=transbot_agent_id)
                 truncated[transbot_agent_id] = self._check_truncated()
                 if truncated[transbot_agent_id]:
@@ -623,9 +626,9 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
 
         else:
             for machine_agent_id in self.machine_agents:
-                rewards[machine_agent_id] = 0.0
+                self.rewards[machine_agent_id] = 0.0
             for transbot_agent_id in self.transbot_agents:
-                rewards[transbot_agent_id] = 0.0
+                self.rewards[transbot_agent_id] = 0.0
 
         terminated["__all__"] = len(self.terminateds) == len(self.agents)
         truncated["__all__"] = len(self.truncateds) == len(self.agents)
@@ -644,7 +647,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         elif self.current_actor.startswith("transbot"):
             observations[self.current_actor] = self._get_transbot_obs(transbot_agent_id=self.current_actor)
 
-        return observations, rewards, terminated, truncated, infos
+        return observations, self.rewards, terminated, truncated, infos
 
     def _step_a_machine_for_one_step(self, machine_index):
         current_machine = self.factory_instance.machines[machine_index]
@@ -708,6 +711,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
 
             if self._check_machine_finish_task(machine_id=machine_index):
                 current_machine.finish_processing(finish_time=self.current_time_after_step)
+                self.rewards[f'machine{current_machine.machine_id}'] += 0.01
                 current_job.finish_processing(finish_time=self.current_time_after_step)
                 self.local_result.jobs[current_job.job_id].operations[
                     current_job.current_processing_operation - 1
@@ -1080,6 +1084,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                         current_job.current_processing_operation
                     ].actual_finish_transporting_time = self.current_time_after_step
                     current_transbot.finish_loaded_transporting(finish_time=self.current_time_after_step)
+                    self.rewards[f'transbot{current_transbot.agv_id}'] += 0.01
                 else:
                     # Mark the new position of the transbot as an obstacle
                     self.factory_instance.factory_graph.set_obstacle(location=current_transbot.current_location)
@@ -1477,8 +1482,8 @@ if __name__ == "__main__":
         "n_jobs": dfjspt_params.n_jobs,
         "n_transbots": dfjspt_params.n_transbots,
         "local_schedule": local_schedule,
-        # "local_result_file": result_file_name,
-        "render_mode": "human",
+        "local_result_file": result_file_name,
+        # "render_mode": "human",
     }
 
     scheduling_env = LocalSchedulingMultiAgentEnv(config)
@@ -1491,8 +1496,8 @@ if __name__ == "__main__":
         print(f"\nStarting episode {episode + 1}")
         decision_count = 0
         observations, infos = scheduling_env.reset()
-        scheduling_env.render()
-        print(f"decision_count = {decision_count}")
+        # scheduling_env.render()
+        # print(f"decision_count = {decision_count}")
         decision_count += 1
         done = {'__all__': False}
         truncated = {'__all__': False}
@@ -1513,27 +1518,27 @@ if __name__ == "__main__":
                     # actions[agent_id] = 0  # Default to a no-op if no valid actions
 
             observations, rewards, done, truncated, info = scheduling_env.step(actions)
-            scheduling_env.render()
+            # scheduling_env.render()
             # print(f"decision_count = {decision_count}")
             decision_count += 1
 
             for agent, reward in rewards.items():
                 total_rewards[agent] += reward
 
-        scheduling_env.close()
+        # scheduling_env.close()
             # print(f"Actions: {actions}")
             # print(f"Rewards: {rewards}")
             # print(f"Done: {done}")
-        for job_id in range(scheduling_env.num_jobs):
-            print(f"job {job_id}: {scheduling_env.scheduling_instance.jobs[job_id].scheduled_results}")
-        for machine_id in range(scheduling_env.num_machines):
-            print(f"machine {machine_id}: {scheduling_env.factory_instance.machines[machine_id].scheduled_results}")
-        for transbot_id in range(scheduling_env.num_transbots):
-            print(f"transbot {transbot_id}: {scheduling_env.factory_instance.agv[transbot_id].scheduled_results}")
+        # for job_id in range(scheduling_env.num_jobs):
+        #     print(f"job {job_id}: {scheduling_env.scheduling_instance.jobs[job_id].scheduled_results}")
+        # for machine_id in range(scheduling_env.num_machines):
+        #     print(f"machine {machine_id}: {scheduling_env.factory_instance.machines[machine_id].scheduled_results}")
+        # for transbot_id in range(scheduling_env.num_transbots):
+        #     print(f"transbot {transbot_id}: {scheduling_env.factory_instance.agv[transbot_id].scheduled_results}")
 
         print(f"Actual makespan = {scheduling_env.current_time_after_step}")
         print(f"Estimated makespan = {scheduling_env.initial_estimated_makespan}")
-        print(f"Total reward for episode {episode + 1}: {total_rewards}")
+        print(f"Total reward for episode {episode + 1}: {total_rewards['machine0']}")
 
         func("Local Scheduling completed.")
 
