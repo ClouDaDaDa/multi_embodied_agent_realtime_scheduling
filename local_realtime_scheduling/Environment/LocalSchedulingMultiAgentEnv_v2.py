@@ -159,73 +159,37 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
 
         # Rendering settings
         self.render_mode = config["render_mode"] if "render_mode" in config else None
-        self.fig = None
-        self.ax = None
+        if self.render_mode in ["human", "rgb_array"]:
+            self.fig = None
+            self.ax = None
 
-        # Adjust figure size dynamically based on the factory graph size
-        self.scale_factor = 1.0  # Scale factor for dynamic figure sizing
-        self.figsize = (self.factory_instance.factory_graph.width * self.scale_factor,
-                        self.factory_instance.factory_graph.height * self.scale_factor)
-        # Dynamically scale marker sizes based on the grid size
-        # self.obstacle_size = 600  # Square size is equivalent to 1 grid
-        # self.pickup_dropoff_size = self.obstacle_size
-        # self.transbot_size = self.obstacle_size * 0.6
-        # self.job_size = self.obstacle_size * 0.3
-        # self.path_point_size = self.obstacle_size * 0.3
-        # self.start_goal_size = self.obstacle_size * 0.3
+            # Adjust figure size dynamically based on the factory graph size
+            self.scale_factor = 1.0  # Scale factor for dynamic figure sizing
+            self.figsize = (self.factory_instance.factory_graph.width * self.scale_factor,
+                            self.factory_instance.factory_graph.height * self.scale_factor)
 
-        self.machine_color_ids = set(
-            f"Machine {machine.machine_id}"
-            for machine in self.factory_instance.machines
-        )
-        if self.num_machines <= 20:
-            self.machine_colormap = plt.colormaps["tab20"]
-        else:
-            self.machine_colormap = cm.get_cmap("hsv", self.num_machines)
-        self.machine_color_map = {resource: self.machine_colormap(i / self.num_machines) for i, resource in
-                                   enumerate(self.machine_color_ids)}
+            self.machine_color_ids = set(
+                f"Machine {machine.machine_id}"
+                for machine in self.factory_instance.machines
+            )
+            if self.num_machines <= 20:
+                self.machine_colormap = plt.colormaps["tab20"]
+            else:
+                self.machine_colormap = cm.get_cmap("hsv", self.num_machines)
+            self.machine_color_map = {resource: self.machine_colormap(i / self.num_machines) for i, resource in
+                                       enumerate(self.machine_color_ids)}
 
-        self.transbot_color_ids = set(
-            f"Transbot {transbot.agv_id}"
-            for transbot in self.factory_instance.agv
-        )
-        if self.num_transbots <= 12:
-            self.transbot_colormap = plt.colormaps["Set3"]
-        else:
-            self.transbot_colormap = cm.get_cmap("Purples", self.num_transbots)
-        self.transbot_color_map = {resource: self.transbot_colormap(i / self.num_transbots) for i, resource in
-                                   enumerate(self.transbot_color_ids)}
+            self.transbot_color_ids = set(
+                f"Transbot {transbot.agv_id}"
+                for transbot in self.factory_instance.agv
+            )
+            if self.num_transbots <= 12:
+                self.transbot_colormap = plt.colormaps["Set3"]
+            else:
+                self.transbot_colormap = cm.get_cmap("Purples", self.num_transbots)
+            self.transbot_color_map = {resource: self.transbot_colormap(i / self.num_transbots) for i, resource in
+                                       enumerate(self.transbot_color_ids)}
 
-        # # Initialize rendering if needed
-        # if self.render_mode in ["human", "rgb_array"]:
-        #     plt.ion()  # Enable interactive mode
-        #     self.fig, self.ax = plt.subplots(figsize=self.figsize)
-        #     self.ax.set_xlim(-1, self.factory_instance.factory_graph.width + 1)
-        #     self.ax.set_ylim(-1, self.factory_instance.factory_graph.height + 1)
-        #     # self.plot_size = 100 * (self.factory_instance.factory_graph.width + self.factory_instance.factory_graph.height) / 2
-        #     # self.plot_size = 25 * np.pi
-        #     self.ax.set_xlabel("X Position")
-        #     self.ax.set_ylabel("Y Position")
-        #     x_ticks = range(-1, self.factory_instance.factory_graph.width + 1, 1)
-        #     y_ticks = range(-1, self.factory_instance.factory_graph.height + 1, 1)
-        #     self.ax.set_xticks(x_ticks)
-        #     self.ax.set_yticks(y_ticks)
-        #     self.ax.set_aspect('equal', adjustable='box')
-        #     # self.ax.grid(True, linestyle='--', linewidth=0.5)
-        #     self.fig.subplots_adjust(right=0.6)
-
-            # Static elements: obstacles, pickup/dropoff points
-            # self._plot_static_elements()
-
-            # Initial static factory graph
-            # self.obstacles_plot, = self.ax.plot([], [], 'bo', markersize=10, label='Obstacles')
-            # for obstacle_location in self.factory_instance.factory_graph.obstacles:
-            #     self.obstacles_plot, =
-
-            # self.agent_plot, = self.ax.plot([], [], 'bo', markersize=10, label='Agent')
-            # self.target_plot, = self.ax.plot(self.target[0], self.target[1], 'ro', markersize=10, label='Target')
-            # self.text = self.ax.text(0.02, 0.98, '', transform=self.ax.transAxes, fontsize=12)
-            # self.ax.legend()
 
     def _initialize_state(self, agent_id):
         obs = {}
