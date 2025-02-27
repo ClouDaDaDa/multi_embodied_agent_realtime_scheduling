@@ -764,6 +764,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                     job_location = self.factory_instance.factory_graph.pickup_dropoff_points[
                         current_job.current_location]
                     # print(f"Transbot {transbot_index}: (job {current_job.job_id})'s location = {current_job.current_location}")
+                    # todo: check whether the current_job.assigned_machine exist
                     machine_location = self.factory_instance.factory_graph.pickup_dropoff_points[
                         self.factory_instance.machines[current_job.assigned_machine].location]
                     transbot_to_job = abs(current_transbot.current_location[0] - job_location[0]) \
@@ -1009,6 +1010,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                         current_job = self.scheduling_instance.jobs[current_transbot.current_task]
                         job_location = self.factory_instance.factory_graph.pickup_dropoff_points[
                             current_job.current_location]
+                        # todo: check whether the current_job.assigned_machine exist
                         machine_location = self.factory_instance.factory_graph.pickup_dropoff_points[
                             self.factory_instance.machines[current_job.assigned_machine].location]
                         transbot_to_job = abs(current_transbot.current_location[0] - job_location[0]) \
