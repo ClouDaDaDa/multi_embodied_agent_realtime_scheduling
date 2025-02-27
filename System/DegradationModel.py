@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import gamma, fatiguelife, lognorm
+# from scipy.stats import gamma, fatiguelife, lognorm
 
 
 class DegradationModel:
@@ -25,20 +25,20 @@ class DegradationModel:
             scale = self.degradation_parameters["scale"]
             return 1 - np.exp(- (current_life / scale) ** shape)
 
-        elif self.degradation_type == "lognormal":
-            mean = self.degradation_parameters["mean"]
-            sigma = self.degradation_parameters["sigma"]
-            return lognorm.cdf(current_life, s=sigma, scale=np.exp(mean))
-
-        elif self.degradation_type == "gamma":
-            shape = self.degradation_parameters["shape"]
-            rate = self.degradation_parameters["rate"]
-            return gamma.cdf(current_life, a=shape, scale=1/rate)
-
-        elif self.degradation_type == "fatigue":
-            alpha = self.degradation_parameters["alpha"]
-            beta = self.degradation_parameters["beta"]
-            return fatiguelife.cdf(current_life, c=alpha, scale=beta)
+        # elif self.degradation_type == "lognormal":
+        #     mean = self.degradation_parameters["mean"]
+        #     sigma = self.degradation_parameters["sigma"]
+        #     return lognorm.cdf(current_life, s=sigma, scale=np.exp(mean))
+        #
+        # elif self.degradation_type == "gamma":
+        #     shape = self.degradation_parameters["shape"]
+        #     rate = self.degradation_parameters["rate"]
+        #     return gamma.cdf(current_life, a=shape, scale=1/rate)
+        #
+        # elif self.degradation_type == "fatigue":
+        #     alpha = self.degradation_parameters["alpha"]
+        #     beta = self.degradation_parameters["beta"]
+        #     return fatiguelife.cdf(current_life, c=alpha, scale=beta)
 
         else:
             raise ValueError(f"Unknown degradation type: {self.degradation_type}")
@@ -59,26 +59,26 @@ class DegradationModel:
                 scale = self.degradation_parameters["scale"]
                 return (shape / scale) * (current_life / scale) ** (shape - 1)
 
-            elif self.degradation_type == "lognormal":
-                mean = self.degradation_parameters["mean"]
-                sigma = self.degradation_parameters["sigma"]
-                pdf_value = lognorm.pdf(current_life, s=sigma, scale=np.exp(mean))
-                cdf_value = lognorm.cdf(current_life, s=sigma, scale=np.exp(mean))
-                return pdf_value / (1 - cdf_value) if (1 - cdf_value) > 0 else 1.0
-
-            elif self.degradation_type == "gamma":
-                shape = self.degradation_parameters["shape"]
-                rate = self.degradation_parameters["rate"]
-                pdf_value = gamma.pdf(current_life, a=shape, scale=1 / rate)
-                cdf_value = gamma.cdf(current_life, a=shape, scale=1 / rate)
-                return (pdf_value / (1 - cdf_value)) if (1 - cdf_value) > 0 else 1.0
-
-            elif self.degradation_type == "fatigue":
-                alpha = self.degradation_parameters["alpha"]
-                beta = self.degradation_parameters["beta"]
-                pdf_value = fatiguelife.pdf(current_life, alpha, scale=beta)
-                cdf_value = fatiguelife.cdf(current_life, alpha, scale=beta)
-                return pdf_value / (1 - cdf_value) if (1 - cdf_value) > 0 else 1.0
+            # elif self.degradation_type == "lognormal":
+            #     mean = self.degradation_parameters["mean"]
+            #     sigma = self.degradation_parameters["sigma"]
+            #     pdf_value = lognorm.pdf(current_life, s=sigma, scale=np.exp(mean))
+            #     cdf_value = lognorm.cdf(current_life, s=sigma, scale=np.exp(mean))
+            #     return pdf_value / (1 - cdf_value) if (1 - cdf_value) > 0 else 1.0
+            #
+            # elif self.degradation_type == "gamma":
+            #     shape = self.degradation_parameters["shape"]
+            #     rate = self.degradation_parameters["rate"]
+            #     pdf_value = gamma.pdf(current_life, a=shape, scale=1 / rate)
+            #     cdf_value = gamma.cdf(current_life, a=shape, scale=1 / rate)
+            #     return (pdf_value / (1 - cdf_value)) if (1 - cdf_value) > 0 else 1.0
+            #
+            # elif self.degradation_type == "fatigue":
+            #     alpha = self.degradation_parameters["alpha"]
+            #     beta = self.degradation_parameters["beta"]
+            #     pdf_value = fatiguelife.pdf(current_life, alpha, scale=beta)
+            #     cdf_value = fatiguelife.cdf(current_life, alpha, scale=beta)
+            #     return pdf_value / (1 - cdf_value) if (1 - cdf_value) > 0 else 1.0
 
             else:
                 raise ValueError(f"Unknown degradation type: {self.degradation_type}")

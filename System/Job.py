@@ -21,6 +21,7 @@ class Job:
 
         # Dynamic global features of the job
         self.current_location = 'warehouse'
+        self.moving_location = None
         self.job_status = 0  # 0: idle, 1: processing, 2: transporting, 3: completed
         self.job_progress = 0.0
         self.is_completed = False
@@ -88,15 +89,17 @@ class Job:
             ("Transport", self.current_processing_operation, f"transbot{self.assigned_transbot}", start_time))
         self.assigned_transbot = None
 
-    def update_transporting(self):
+    def update_transporting(self, current_location):
         """
         update transporting for 1 time step
         """
+        self.moving_location = current_location
         self.cumulative_transporting_time += 1.0
         self.estimated_remaining_time_for_current_task -= 1.0
 
     def finish_transporting(self, finish_time, current_location):
         self.job_status = 0
+        self.moving_location = None
         self.current_location = current_location
         self.estimated_remaining_time_for_current_task = 0.0
         # (operation type, operation id, transbot id, finish time)
@@ -117,6 +120,7 @@ class Job:
     def reset_job(self):
         # Dynamic global features of the job
         self.current_location = 'warehouse'
+        self.moving_location = None
         self.job_status = 0  # 0: idle, 1: processing, 2: transporting, 3: completed
         self.job_progress = 0.0
         self.is_completed = False

@@ -1,52 +1,6 @@
 import heapq
 import matplotlib.pyplot as plt
 
-# class Node:
-#     def __init__(self, x, y, walkable=True):
-#         self.x = x
-#         self.y = y
-#         self.walkable = walkable  # True if transbots can pass through
-#         self.g = float('inf')  # Cost from start node
-#         self.h = 0  # Heuristic cost to goal
-#         self.f = float('inf')  # Total cost
-#         self.parent = None
-#
-#     def __lt__(self, other):
-#         return self.f < other.f  # Priority in the open list
-#
-#
-# class FactoryGraph:
-#     def __init__(self, width: int, height: int):
-#         self.width = width
-#         self.height = height
-#         # Initialize nodes as walkable by default
-#         self.nodes = [[Node(x, y) for y in range(self.height)] for x in range(self.width)]
-#
-#     def set_obstacle(self, x, y):
-#         self.nodes[x][y].walkable = False  # Set as obstacle
-#
-#     def is_walkable(self, x, y):
-#         return 0 <= x < self.width and 0 <= y < self.height and self.nodes[x][y].walkable
-#
-#     def neighbors(self, node):
-#         # Return adjacent nodes that are walkable
-#         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
-#         result = []
-#         for dx, dy in directions:
-#             nx, ny = node.x + dx, node.y + dy
-#             if self.is_walkable(nx, ny):
-#                 result.append(self.nodes[nx][ny])
-#         return result
-#
-#     def reset_nodes(self):
-#         # Reset costs and parents for a new pathfinding run
-#         for row in self.nodes:
-#             for node in row:
-#                 node.g = float('inf')
-#                 node.h = 0
-#                 node.f = float('inf')
-#                 node.parent = None
-
 
 # def heuristic(node, goal):
 #     # Use Manhattan distance as heuristic for A* on a grid
@@ -153,6 +107,7 @@ def reconstruct_path(goal_node):
         path.append((current.x, current.y))
         current = current.parent
     path.reverse()  # Reverse to get path from start to goal
+    path.pop(0)
     return path
 
 
@@ -206,11 +161,10 @@ def a_star_search(graph, start, goal):
                     heapq.heappush(open_list, (neighbor.f, neighbor))
 
     # Restore reserved nodes as walkable if no path is found
-    # for x, y in reserved_nodes:
-    #     graph.nodes[x][y].walkable = True
     for node_location in reserved_nodes:
         graph.set_walkable(location=node_location)
 
+    # raise Exception(f"Cannot find a walkable path from {start} to {goal}!")
     return []  # Return empty path if no path is found
 
 

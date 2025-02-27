@@ -23,13 +23,11 @@ class FactoryGraph:
     def __init__(self, n_machines):
         nearest_square_root = math.ceil(n_machines ** 0.5)
         self.width = 6 * nearest_square_root + 2
-        self.height = 3 * nearest_square_root + 4
-        # Initialize nodes as walkable by default
-        self.nodes = [[Node(x, y) for y in range(self.height)] for x in range(self.width)]
+        # self.height = 3 * nearest_square_root + 4
 
         self.obstacles = []
-        self.obstacles.append((4, 0))
-        self.obstacles.append((self.width - 4, self.height - 1))
+        # self.obstacles.append((4, 0))
+        # self.obstacles.append((self.width - 4, self.height - 1))
         self.pickup_dropoff_points = {}
         self.location_index_map = self.create_location_to_index_map(n_machines)
         for machine_k in range(n_machines):
@@ -38,11 +36,26 @@ class FactoryGraph:
             for j in range(3):
                 self.obstacles.append((2 + 6 * x_index + j, 3 + 3 * y_index))
             self.pickup_dropoff_points[f"machine_{machine_k}"] = (5 + 6 * x_index, 3 + 3 * y_index)
-        self.pickup_dropoff_points["charging_0"] = (5, 0)
-        self.pickup_dropoff_points["charging_1"] = (self.width - 3, self.height - 1)
+        # self.pickup_dropoff_points["charging_0"] = (5, 0)
+        # self.pickup_dropoff_points["charging_1"] = (self.width - 3, self.height - 1)
+
+        charging_station_x_index = int(self.width / 2.0)
+        # charging_station_0
+        self.obstacles.append((charging_station_x_index, 0))
+        self.pickup_dropoff_points["charging_0"] = (charging_station_x_index + 1, 0)
+        # charging_station_1
+        charging_station_1_y_index = 6 + 3 * ((n_machines - 1) // nearest_square_root)
+        self.obstacles.append((charging_station_x_index, charging_station_1_y_index))
+        self.pickup_dropoff_points["charging_1"] = (charging_station_x_index + 1, charging_station_1_y_index)
+
         self.pickup_dropoff_points["warehouse"] = (0, 0)
 
+        self.height = charging_station_1_y_index + 1
+
         print(f"pickup_dropoff_points: {self.pickup_dropoff_points}")
+
+        # Initialize nodes as walkable by default
+        self.nodes = [[Node(x, y) for y in range(self.height)] for x in range(self.width)]
 
         for obstacle_location in self.obstacles:
             self.set_obstacle(obstacle_location)

@@ -86,8 +86,8 @@ class AGV:
                                   start_time: float):
         if start_time != self.cumulative_total_time:
             raise Exception(f"Error in time synchronization with the environment: {start_time} != {self.cumulative_total_time}")
-        if self.current_location != unload_path.pop(0):
-            raise Exception(f"Transbot is not currently at the starting point of the planned path!")
+        # if self.current_location != unload_path.pop(0):
+        #     raise Exception(f"Transbot is not currently at the starting point of the planned path!")
         self.agv_status = 1
         if self.current_task >= 0:
             pass
@@ -114,8 +114,8 @@ class AGV:
                                   start_time: float):
         if start_time != self.cumulative_total_time:
             raise Exception(f"Error in time synchronization with the environment: {start_time} != {self.cumulative_total_time}")
-        if self.current_location != loaded_path.pop(0):
-            raise Exception(f"Transbot is not currently at the starting point of the planned path!")
+        # if self.current_location != loaded_path.pop(0):
+        #     raise Exception(f"Transbot is not currently at the starting point of the planned path!")
         if self.current_location == target_location:
             raise Exception(f"Transbot {self.agv_id} is already in target {target_location}!")
         self.agv_status = 2

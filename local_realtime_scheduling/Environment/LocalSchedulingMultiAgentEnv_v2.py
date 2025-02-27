@@ -3,6 +3,8 @@
 import os
 import pickle
 import matplotlib.pyplot as plt
+import matplotlib.patches as pch
+import matplotlib.cm as cm
 from local_realtime_scheduling.Environment.ExecutionResult import LocalResult, Local_Job_result, Operation_result
 from local_realtime_scheduling.Environment.path_planning import a_star_search
 from local_realtime_scheduling.InterfaceWithGlobal.divide_global_schedule_to_local_from_pkl import LocalSchedule, Local_Job_schedule
@@ -42,7 +44,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
     """
     A Multi-agent Environment for Integrated Production, Transportation and Maintenance Real-time Scheduling.
     """
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 10}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 20}
 
     def __init__(self,
                  config,
@@ -159,19 +161,61 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.render_mode = config["render_mode"] if "render_mode" in config else None
         self.fig = None
         self.ax = None
-        self.agent_plot = None
-        self.target_plot = None
-        self.text = None
 
-        # Initialize rendering if needed
-        if self.render_mode in ["human", "rgb_array"]:
-            plt.ion()  # Enable interactive mode
-            self.fig, self.ax = plt.subplots(figsize=(8, 6))
-            self.ax.set_xlim(0, self.factory_instance.factory_graph.width)
-            self.ax.set_ylim(0, self.factory_instance.factory_graph.height)
-            self.ax.set_xlabel("X Position")
-            self.ax.set_ylabel("Y Position")
-            self.ax.grid(True)
+        # Adjust figure size dynamically based on the factory graph size
+        self.scale_factor = 1.0  # Scale factor for dynamic figure sizing
+        self.figsize = (self.factory_instance.factory_graph.width * self.scale_factor,
+                        self.factory_instance.factory_graph.height * self.scale_factor)
+        # Dynamically scale marker sizes based on the grid size
+        # self.obstacle_size = 600  # Square size is equivalent to 1 grid
+        # self.pickup_dropoff_size = self.obstacle_size
+        # self.transbot_size = self.obstacle_size * 0.6
+        # self.job_size = self.obstacle_size * 0.3
+        # self.path_point_size = self.obstacle_size * 0.3
+        # self.start_goal_size = self.obstacle_size * 0.3
+
+        self.machine_color_ids = set(
+            f"Machine {machine.machine_id}"
+            for machine in self.factory_instance.machines
+        )
+        if self.num_machines <= 20:
+            self.machine_colormap = plt.colormaps["tab20"]
+        else:
+            self.machine_colormap = cm.get_cmap("hsv", self.num_machines)
+        self.machine_color_map = {resource: self.machine_colormap(i / self.num_machines) for i, resource in
+                                   enumerate(self.machine_color_ids)}
+
+        self.transbot_color_ids = set(
+            f"Transbot {transbot.agv_id}"
+            for transbot in self.factory_instance.agv
+        )
+        if self.num_transbots <= 12:
+            self.transbot_colormap = plt.colormaps["Set3"]
+        else:
+            self.transbot_colormap = cm.get_cmap("Purples", self.num_transbots)
+        self.transbot_color_map = {resource: self.transbot_colormap(i / self.num_transbots) for i, resource in
+                                   enumerate(self.transbot_color_ids)}
+
+        # # Initialize rendering if needed
+        # if self.render_mode in ["human", "rgb_array"]:
+        #     plt.ion()  # Enable interactive mode
+        #     self.fig, self.ax = plt.subplots(figsize=self.figsize)
+        #     self.ax.set_xlim(-1, self.factory_instance.factory_graph.width + 1)
+        #     self.ax.set_ylim(-1, self.factory_instance.factory_graph.height + 1)
+        #     # self.plot_size = 100 * (self.factory_instance.factory_graph.width + self.factory_instance.factory_graph.height) / 2
+        #     # self.plot_size = 25 * np.pi
+        #     self.ax.set_xlabel("X Position")
+        #     self.ax.set_ylabel("Y Position")
+        #     x_ticks = range(-1, self.factory_instance.factory_graph.width + 1, 1)
+        #     y_ticks = range(-1, self.factory_instance.factory_graph.height + 1, 1)
+        #     self.ax.set_xticks(x_ticks)
+        #     self.ax.set_yticks(y_ticks)
+        #     self.ax.set_aspect('equal', adjustable='box')
+        #     # self.ax.grid(True, linestyle='--', linewidth=0.5)
+        #     self.fig.subplots_adjust(right=0.6)
+
+            # Static elements: obstacles, pickup/dropoff points
+            # self._plot_static_elements()
 
             # Initial static factory graph
             # self.obstacles_plot, = self.ax.plot([], [], 'bo', markersize=10, label='Obstacles')
@@ -584,7 +628,6 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
 
             for machine_agent_id in self.machine_agents:
                 # Machines get new rewards:
-                # todo: design a suitable reward function for each machine
                 rewards[machine_agent_id] = self.reward_this_step
                 terminated[machine_agent_id] = self._check_done()
                 if terminated[machine_agent_id]:
@@ -598,7 +641,6 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
 
             for transbot_agent_id in self.transbot_agents:
                 # Transbots get new rewards:
-                # todo: design a suitable reward function for each transbot
                 rewards[transbot_agent_id] = self.reward_this_step
                 terminated[transbot_agent_id] = self._check_done()
                 if terminated[transbot_agent_id]:
@@ -613,7 +655,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
             # Randomly shuffle the index lists
             random.shuffle(self.machine_index)
             random.shuffle(self.transbot_index)
-            self.all_agents_have_made_decisions = False
+            # self.all_agents_have_made_decisions = False
 
         else:
             for machine_agent_id in self.machine_agents:
@@ -816,7 +858,28 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         elif current_transbot.agv_status == 1:
             # If the congestion exceeds 10.0, an error message will be displayed
             if current_transbot.congestion_time >= 10.0:
-                raise Exception(f"Transbot {transbot_index} has been congested for 10 time steps!")
+                # raise Exception(f"Transbot {transbot_index} has been congested for 10 time steps!")
+                if len(current_transbot.unload_path) > 0:
+                    if current_transbot.is_for_charging:  # go to a charging station
+                        goal = self.factory_instance.factory_graph.pickup_dropoff_points[
+                            self.factory_instance.factory_graph.nearest_charging_station(
+                                current_transbot.current_location
+                            )
+                        ]
+                    else:  # go to a job
+                        goal = self.factory_instance.factory_graph.pickup_dropoff_points[
+                            self.scheduling_instance.jobs[
+                                current_transbot.current_task
+                            ].current_location
+                        ]
+                    replan_path = a_star_search(
+                        graph=self.factory_instance.factory_graph,
+                        start=current_transbot.current_location,
+                        goal=goal,
+                    )
+                    current_transbot.unload_path = replan_path
+                else:
+                    pass
 
             self._handle_transbot_unload_move(current_transbot=current_transbot)
 
@@ -824,7 +887,23 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         elif current_transbot.agv_status == 2:
             # If the congestion exceeds 10.0, an error message will be displayed
             if current_transbot.congestion_time >= 10.0:
-                raise Exception(f"Transbot {transbot_index} has been congested for 10 time steps!")
+                # raise Exception(f"Transbot {transbot_index} has been congested for 10 time steps!")
+                if len(current_transbot.loaded_path) > 0:
+                    goal = self.factory_instance.factory_graph.pickup_dropoff_points[
+                        self.factory_instance.machines[
+                            self.scheduling_instance.jobs[
+                                current_transbot.current_task
+                            ].assigned_machine
+                        ].location
+                    ]
+                    replan_path = a_star_search(
+                        graph=self.factory_instance.factory_graph,
+                        start=current_transbot.current_location,
+                        goal=goal,
+                    )
+                    current_transbot.loaded_path = replan_path
+                else:
+                    pass
 
             self._handle_transbot_loaded_move(current_transbot=current_transbot)
 
@@ -866,6 +945,9 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.factory_instance.factory_graph.set_walkable(location=current_transbot.current_location)
         # transbot move for one step
         current_transbot.moving_one_step(direction=direction, load=load)
+        if load > 0:
+            current_job = self.scheduling_instance.jobs[current_transbot.current_task]
+            current_job.update_transporting(current_location=current_transbot.current_location)
 
     def _move_to_another_walkable_location(self, current_transbot, next_location, load: int):
         walkable_next_direction = self.factory_instance.factory_graph.check_adjacent_positions_walkable(
@@ -876,6 +958,9 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
             # waiting
             current_transbot.congestion_time += 1.0
             current_transbot.moving_one_step(direction=(0, 0), load=load)
+            if load > 0:
+                current_job = self.scheduling_instance.jobs[current_transbot.current_task]
+                current_job.update_transporting(current_location=current_transbot.current_location)
         else:
             current_transbot.congestion_time = 0.0
             current_transbot.loaded_path.insert(0, current_transbot.current_location)
@@ -883,112 +968,178 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
             self.factory_instance.factory_graph.set_walkable(location=current_transbot.current_location)
             # transbot move for one step
             current_transbot.moving_one_step(direction=walkable_next_direction, load=load)
+            if load > 0:
+                current_job = self.scheduling_instance.jobs[current_transbot.current_task]
+                current_job.update_transporting(current_location=current_transbot.current_location)
             # Mark the new position of the transbot as an obstacle
             self.factory_instance.factory_graph.set_obstacle(location=current_transbot.current_location)
 
-    def _handle_transbot_unload_move(self, current_transbot):
+    def _check_walkable_path(self, current_transbot):
         if len(current_transbot.unload_path) == 0:
-            raise ValueError(f"Transbot {current_transbot.agv_id}'s unload path is empty!")
-        # Check if next_location is walkable
-        next_location = current_transbot.unload_path[0]
-        if self.factory_instance.factory_graph.is_walkable(x=next_location[0], y=next_location[1]):
-            del current_transbot.unload_path[0]
-
-            self._transbot_move_to_the_next_location(current_transbot=current_transbot,
-                                                     next_location=next_location,
-                                                     load=0)
-
-            if self._check_transbot_finish_transporting(transbot_id=current_transbot.agv_id):
-                current_transbot.finish_unload_transporting(finish_time=self.current_time_after_step)
-                if current_transbot.current_task >= 0:
-                    # Check whether the job is currently transportable
-                    current_job = self.scheduling_instance.jobs[current_transbot.current_task]
-                    job_location = self.factory_instance.factory_graph.pickup_dropoff_points[
-                        current_job.current_location]
-                    machine_location = self.factory_instance.factory_graph.pickup_dropoff_points[
-                        self.factory_instance.machines[current_job.assigned_machine].location]
-                    transbot_to_job = abs(current_transbot.current_location[0] - job_location[0]) \
-                                      + abs(current_transbot.current_location[1] - job_location[1])
-                    if transbot_to_job > 0:
-                        raise Exception(
-                            f"Transbot {current_transbot.agv_id} hasn't get job {current_transbot.current_task}!")
-                    if current_job.job_status == 0:
-                        # Loaded transport can start immediately
-                        loaded_path = a_star_search(
-                            graph=self.factory_instance.factory_graph,
-                            start=job_location,
-                            goal=machine_location
+            # raise ValueError(f"Transbot {current_transbot.agv_id}'s unload path is empty!")
+            # Try to re-plan a walkable path
+            start = current_transbot.current_location
+            if current_transbot.agv_status == 1:  # Unload transporting
+                if current_transbot.is_for_charging:  # go to a charging station
+                    goal = self.factory_instance.factory_graph.pickup_dropoff_points[
+                        self.factory_instance.factory_graph.nearest_charging_station(
+                            current_transbot.current_location
                         )
-                        # print(f"from {job_location} to {machine_location}, loaded_path = {loaded_path}")
-                        current_transbot.start_loaded_transporting(
-                            target_location=machine_location,
-                            loaded_path=loaded_path,
-                            start_time=self.current_time_after_step
-                        )
-                        # Update internal status of the job
-                        # print(
-                        #     f"job{current_job.job_id},op{current_job.current_processing_operation},transbot{current_transbot.agv_id},time{self.current_time_after_step}")
-                        self.local_result.jobs[current_job.job_id].operations[
-                            current_job.current_processing_operation
-                        ].actual_start_transporting_time = self.current_time_before_step
-                        self.local_result.jobs[current_job.job_id].operations[
-                            current_job.current_processing_operation
-                        ].assigned_transbot = current_transbot.agv_id
-                        current_job.start_transporting(start_time=self.current_time_after_step,
-                                                       estimated_duration=len(loaded_path) - 1)
-                elif current_transbot.current_task == -1:
-                    current_transbot.start_charging(start_time=self.current_time_after_step)
+                    ]
+                else:  # go to a job
+                    goal = self.factory_instance.factory_graph.pickup_dropoff_points[
+                        self.scheduling_instance.jobs[
+                            current_transbot.current_task
+                        ].current_location
+                    ]
+            elif current_transbot.agv_status == 2:  # Loaded transporting
+                goal = self.factory_instance.factory_graph.pickup_dropoff_points[
+                            self.factory_instance.machines[
+                                self.scheduling_instance.jobs[
+                                    current_transbot.current_task
+                                ].assigned_machine
+                            ].location
+                        ]
             else:
-                # Mark the new position of the transbot as an obstacle
-                self.factory_instance.factory_graph.set_obstacle(location=current_transbot.current_location)
+                raise ValueError(f"Incorrect transbot status {current_transbot.agv_status}!")
+
+            replan_path = a_star_search(
+                graph=self.factory_instance.factory_graph,
+                start=start,
+                goal=goal,
+            )
+            if len(replan_path) > 0:
+                if current_transbot.agv_status == 1:
+                    current_transbot.unload_path = replan_path
+                elif current_transbot.agv_status == 2:
+                    current_transbot.loaded_path = replan_path
+                return True
+
+            else:
+                return False
 
         else:
-            # todo: wait or re-plan the path?
-            if current_transbot.congestion_time > 1:
-                # Randomly move in other passable directions
-                self._move_to_another_walkable_location(current_transbot=current_transbot,
-                                                        next_location=next_location,
-                                                        load=0)
+            return True
+
+    def _handle_transbot_unload_move(self, current_transbot):
+        # Check whether current_transbot has a walkable path
+        if self._check_walkable_path(current_transbot=current_transbot):
+
+            # Check if next_location is walkable
+            next_location = current_transbot.unload_path[0]
+            if self.factory_instance.factory_graph.is_walkable(x=next_location[0], y=next_location[1]):
+                del current_transbot.unload_path[0]
+
+                self._transbot_move_to_the_next_location(current_transbot=current_transbot,
+                                                         next_location=next_location,
+                                                         load=0)
+
+                if self._check_transbot_finish_transporting(transbot_id=current_transbot.agv_id):
+                    current_transbot.finish_unload_transporting(finish_time=self.current_time_after_step)
+                    if current_transbot.current_task >= 0:
+                        # Check whether the job is currently transportable
+                        current_job = self.scheduling_instance.jobs[current_transbot.current_task]
+                        job_location = self.factory_instance.factory_graph.pickup_dropoff_points[
+                            current_job.current_location]
+                        machine_location = self.factory_instance.factory_graph.pickup_dropoff_points[
+                            self.factory_instance.machines[current_job.assigned_machine].location]
+                        transbot_to_job = abs(current_transbot.current_location[0] - job_location[0]) \
+                                          + abs(current_transbot.current_location[1] - job_location[1])
+                        if transbot_to_job > 0:
+                            raise Exception(
+                                f"Transbot {current_transbot.agv_id} hasn't get job {current_transbot.current_task}!")
+                        if current_job.job_status == 0:
+                            # Loaded transport can start immediately
+                            loaded_path = a_star_search(
+                                graph=self.factory_instance.factory_graph,
+                                start=job_location,
+                                goal=machine_location
+                            )
+                            # print(f"from {job_location} to {machine_location}, loaded_path = {loaded_path}")
+                            current_transbot.start_loaded_transporting(
+                                target_location=machine_location,
+                                loaded_path=loaded_path,
+                                start_time=self.current_time_after_step
+                            )
+                            # Update internal status of the job
+                            # print(
+                            #     f"job{current_job.job_id},op{current_job.current_processing_operation},transbot{current_transbot.agv_id},time{self.current_time_after_step}")
+                            self.local_result.jobs[current_job.job_id].operations[
+                                current_job.current_processing_operation
+                            ].actual_start_transporting_time = self.current_time_before_step
+                            self.local_result.jobs[current_job.job_id].operations[
+                                current_job.current_processing_operation
+                            ].assigned_transbot = current_transbot.agv_id
+                            current_job.start_transporting(start_time=self.current_time_after_step,
+                                                           estimated_duration=len(loaded_path) - 1)
+                    elif current_transbot.current_task == -1:
+                        current_transbot.start_charging(start_time=self.current_time_after_step)
+                else:
+                    # Mark the new position of the transbot as an obstacle
+                    self.factory_instance.factory_graph.set_obstacle(location=current_transbot.current_location)
+
             else:
-                # waiting
-                current_transbot.congestion_time += 1.0
-                current_transbot.moving_one_step(direction=(0, 0), load=0)
+                if current_transbot.congestion_time > 1:
+                    # Randomly move in other passable directions
+                    self._move_to_another_walkable_location(current_transbot=current_transbot,
+                                                            next_location=next_location,
+                                                            load=0)
+                else:
+                    # waiting
+                    current_transbot.congestion_time += 1.0
+                    current_transbot.moving_one_step(direction=(0, 0), load=0)
+        else:
+            # waiting
+            current_transbot.congestion_time += 1.0
+            current_transbot.moving_one_step(direction=(0, 0), load=0)
 
     def _handle_transbot_loaded_move(self, current_transbot):
-        # Check if next_location is walkable
-        next_location = current_transbot.loaded_path[0]
-        if self.factory_instance.factory_graph.is_walkable(x=next_location[0], y=next_location[1]):
-            del current_transbot.loaded_path[0]
+        # Check whether current_transbot has a walkable path
+        if self._check_walkable_path(current_transbot=current_transbot):
+            # Check if next_location is walkable
+            next_location = current_transbot.loaded_path[0]
+            if self.factory_instance.factory_graph.is_walkable(x=next_location[0], y=next_location[1]):
+                del current_transbot.loaded_path[0]
 
-            self._transbot_move_to_the_next_location(current_transbot=current_transbot,
-                                                     next_location=next_location,
-                                                     load=1)
+                self._transbot_move_to_the_next_location(current_transbot=current_transbot,
+                                                         next_location=next_location,
+                                                         load=1)
 
-            if self._check_transbot_finish_transporting(transbot_id=current_transbot.agv_id):
-                current_job = self.scheduling_instance.jobs[current_transbot.current_task]
-                if self.factory_instance.factory_graph.pickup_dropoff_points[f"machine_{current_job.assigned_machine}"] != current_transbot.current_location:
-                    raise ValueError(f"job's location mismatch machine's location!")
-                current_job.finish_transporting(finish_time=self.current_time_after_step,
-                                                current_location=f"machine_{current_job.assigned_machine}")
-                self.local_result.jobs[current_job.job_id].operations[
-                    current_job.current_processing_operation
-                ].actual_finish_transporting_time = self.current_time_after_step
-                current_transbot.finish_loaded_transporting(finish_time=self.current_time_after_step)
+                if self._check_transbot_finish_transporting(transbot_id=current_transbot.agv_id):
+                    current_job = self.scheduling_instance.jobs[current_transbot.current_task]
+                    if self.factory_instance.factory_graph.pickup_dropoff_points[
+                        f"machine_{current_job.assigned_machine}"] != current_transbot.current_location:
+                        raise ValueError(f"job's location mismatch machine's location!")
+                    current_job.finish_transporting(finish_time=self.current_time_after_step,
+                                                    current_location=f"machine_{current_job.assigned_machine}")
+                    self.local_result.jobs[current_job.job_id].operations[
+                        current_job.current_processing_operation
+                    ].actual_finish_transporting_time = self.current_time_after_step
+                    current_transbot.finish_loaded_transporting(finish_time=self.current_time_after_step)
+                else:
+                    # Mark the new position of the transbot as an obstacle
+                    self.factory_instance.factory_graph.set_obstacle(location=current_transbot.current_location)
+
             else:
-                # Mark the new position of the transbot as an obstacle
-                self.factory_instance.factory_graph.set_obstacle(location=current_transbot.current_location)
-
+                if current_transbot.congestion_time > 1:
+                    # Randomly move in other passable directions
+                    self._move_to_another_walkable_location(current_transbot=current_transbot,
+                                                            next_location=next_location,
+                                                            load=1)
+                else:
+                    # waiting
+                    current_transbot.congestion_time += 1.0
+                    current_transbot.moving_one_step(direction=(0, 0), load=1)
+                    current_job = self.scheduling_instance.jobs[current_transbot.current_task]
+                    current_job.update_transporting(current_location=current_transbot.current_location)
         else:
-            # todo: wait or re-plan the path?
-            if current_transbot.congestion_time > 1:
-                # Randomly move in other passable directions
-                self._move_to_another_walkable_location(current_transbot=current_transbot,
-                                                        next_location=next_location,
-                                                        load=1)
-            else:
-                # waiting
-                current_transbot.congestion_time += 1.0
-                current_transbot.moving_one_step(direction=(0, 0), load=1)
+            # waiting
+            current_transbot.congestion_time += 1.0
+            current_transbot.moving_one_step(direction=(0, 0), load=1)
+            current_job = self.scheduling_instance.jobs[current_transbot.current_task]
+            current_job.update_transporting(current_location=current_transbot.current_location)
+
+
 
     def _check_machine_processing_action(self, machine_index, processing_action):
         # Check what status is the machine currently in, must be 0 (idling) or 1 or 2 to continue
@@ -1101,6 +1252,10 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
             return False
 
     def render(self):
+        """
+        Render the factory layout for the current time step.
+        This method visualizes the current state of the factory, including machines, transbots, and jobs.
+        """
 
         if self.render_mode is None:
             logging.warning("You are calling render method without specifying any render mode.")
@@ -1108,6 +1263,32 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
 
         if self.render_mode not in ["human", "rgb_array"]:
             raise NotImplementedError(f"Render mode '{self.render_mode}' is not supported.")
+
+        if self.resetted:
+            plt.ion()  # Enable interactive mode
+            self.fig, self.ax = plt.subplots(figsize=self.figsize)
+            self.ax.set_xlim(-1, self.factory_instance.factory_graph.width + 1)
+            self.ax.set_ylim(-1, self.factory_instance.factory_graph.height + 1)
+            # self.plot_size = 100 * (self.factory_instance.factory_graph.width + self.factory_instance.factory_graph.height) / 2
+            # self.plot_size = 25 * np.pi
+            self.ax.set_xlabel("X Position")
+            self.ax.set_ylabel("Y Position")
+            x_ticks = range(-1, self.factory_instance.factory_graph.width + 1, 1)
+            y_ticks = range(-1, self.factory_instance.factory_graph.height + 1, 1)
+            self.ax.set_xticks(x_ticks)
+            self.ax.set_yticks(y_ticks)
+            self.ax.set_aspect('equal', adjustable='box')
+            # self.ax.grid(True, linestyle='--', linewidth=0.5)
+            self.fig.subplots_adjust(right=0.6)
+
+            # # Initialize lists for each category's handles and labels
+            # self.job_handles, self.job_labels = [], []
+            # self.machine_handles, self.machine_labels = [], []
+            # self.transbot_handles, self.transbot_labels = [], []
+
+        # Update dynamic elements: transbots and jobs
+        if self.all_agents_have_made_decisions or self.resetted:
+            self._update_dynamic_elements()
 
         if self.render_mode == "human":
             # Redraw and pause for real-time display
@@ -1123,6 +1304,97 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
             plt.close(self.fig)
             self.fig = None
             plt.ioff()
+
+
+    def _plot_static_elements(self):
+        """
+        Plot static elements: obstacles, pickup/dropoff points (machines, charging stations, warehouse).
+        """
+        # Plot obstacles
+        for x, y in self.factory_instance.factory_graph.obstacles:
+            self.ax.add_patch(pch.Rectangle((x - 0.5, y - 0.5), 1, 1, color='dimgray'))
+        # for x in range(self.factory_instance.factory_graph.width):
+        #     for y in range(self.factory_instance.factory_graph.height):
+        #         if not self.factory_instance.factory_graph.is_walkable(x, y):
+        #             self.ax.add_patch(plt.Rectangle((x - 0.5, y - 0.5), 1, 1, color='dimgray'))
+
+        # Plot pickup/dropoff points (machines, charging stations, warehouse)
+        for point_name, location in self.factory_instance.factory_graph.pickup_dropoff_points.items():
+            x, y = location
+            if point_name == "warehouse" or "charging" in point_name:
+                self.ax.add_patch(pch.Circle((x, y), radius=0.45, alpha=0.6, color='lightgray', label=f'{point_name}'))
+                # self.ax.scatter(x, y, color='lightgray', alpha=0.6, s=self.pickup_dropoff_size, label=f'{point_name}')
+            elif "machine" in point_name:
+                machine_id = int(point_name.split('_')[-1])
+                machine_color = self.machine_color_map[f"Machine {machine_id}"]
+                machine_handle = self.ax.add_patch(pch.Circle((x, y), radius=0.45, alpha=0.6, color=machine_color,
+                                             label=f'Machine {machine_id} ({x}, {y})'))
+                # self.machine_handles.append(machine_handle)
+                # self.machine_labels.append(f'Machine {machine_id} ({x}, {y})')
+            # if "machine" in point_name or "charging" in point_name or point_name == "warehouse":
+            #     self.ax.scatter(x, y, color='lightgray', alpha=0.6, s=600, label=f'{point_name}')
+
+    def _update_dynamic_elements(self):
+        """
+        Update and plot dynamic elements: transbots and jobs.
+        This method clears the dynamic elements and redraws them for the current time step.
+        """
+        # Clear previous dynamic elements
+        self.ax.cla()
+        # self.ax.grid(True)
+        x_ticks = range(-1, self.factory_instance.factory_graph.width + 1, 1)
+        y_ticks = range(-1, self.factory_instance.factory_graph.height + 1, 1)
+        self.ax.set_xticks(x_ticks)
+        self.ax.set_yticks(y_ticks)
+        self.ax.grid(True, linestyle='--', linewidth=0.5)
+
+        # Replot the static elements (obstacles, pickup/dropoff points)
+        self._plot_static_elements()
+
+        # Display current time on the canvas
+        current_time_text = f"Time: {self.current_time_after_step:.1f}"
+        self.ax.text(0.95, 0.95, current_time_text, transform=self.ax.transAxes,
+                     fontsize=12, color='black', ha='right', va='top', fontweight='normal',
+                     bbox=dict(facecolor='white', alpha=0.7, edgecolor='black', boxstyle='round,pad=0.1'))
+
+        # Plot transbots' current positions with dynamic updates
+        for transbot in self.factory_instance.agv:
+            x, y = transbot.current_location
+            transbot_color = self.transbot_color_map[f"Transbot {transbot.agv_id}"]
+            # color = np.random.rand(3,)  # Random color for each transbot
+            transbot_handle = self.ax.add_patch(pch.Circle((x, y), radius=0.3, color=transbot_color,
+                                         label=f'Transbot {transbot.agv_id} ({x}, {y})'))
+            # self.transbot_handles.append(transbot_handle)
+            # self.transbot_labels.append(f'Transbot {transbot.agv_id} ({x}, {y})')
+
+        # Plot jobs' current positions with dynamic updates
+        for job in self.scheduling_instance.jobs:
+            if job.moving_location is None:
+                x, y = self.factory_instance.factory_graph.pickup_dropoff_points[job.current_location]
+            else:
+                x, y = job.moving_location
+
+            job_handle = self.ax.add_patch(pch.RegularPolygon((x, y), 3, radius=0.15, color='yellow',
+                                         label=f'Job {job.job_id} ({x}, {y})'))
+            # self.job_handles.append(job_handle)
+            # self.job_labels.append(f'Job {job.job_id} ({x}, {y})')
+
+        # handles = self.job_handles + self.machine_handles + self.transbot_handles
+        # labels = self.job_labels + self.machine_labels + self.transbot_labels
+
+        # Remove duplicate labels from the legend (only show the first occurrence)
+        handles, labels = self.ax.get_legend_handles_labels()
+        unique_labels = []
+        unique_handles = []
+        for handle, label in zip(handles, labels):
+            if any(x in label for x in ['charging', 'warehouse']):
+                continue
+            if label not in unique_labels:
+                unique_labels.append(label)
+                unique_handles.append(handle)
+
+        self.ax.legend(unique_handles, unique_labels, loc='upper left',
+                       bbox_to_anchor=(1.01, 1), borderaxespad=0., ncol=3)
 
     #     """
     #     Render the current state of the environment, showing key features of machines,
@@ -1242,6 +1514,7 @@ if __name__ == "__main__":
         "n_transbots": dfjspt_params.n_transbots,
         "local_schedule": local_schedule,
         # "local_result_file": result_file_name,
+        "render_mode": "human",
     }
 
     scheduling_env = LocalSchedulingMultiAgentEnv(config)
@@ -1254,6 +1527,7 @@ if __name__ == "__main__":
         print(f"\nStarting episode {episode + 1}")
         decision_count = 0
         observations, infos = scheduling_env.reset()
+        scheduling_env.render()
         print(f"decision_count = {decision_count}")
         decision_count += 1
         done = {'__all__': False}
@@ -1275,12 +1549,14 @@ if __name__ == "__main__":
                     # actions[agent_id] = 0  # Default to a no-op if no valid actions
 
             observations, rewards, done, truncated, info = scheduling_env.step(actions)
+            scheduling_env.render()
             # print(f"decision_count = {decision_count}")
             decision_count += 1
 
             for agent, reward in rewards.items():
                 total_rewards[agent] += reward
 
+        scheduling_env.close()
             # print(f"Actions: {actions}")
             # print(f"Rewards: {rewards}")
             # print(f"Done: {done}")

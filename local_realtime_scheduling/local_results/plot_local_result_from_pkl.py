@@ -76,17 +76,16 @@ def plot_local_result_gantt(local_result):
                 ax.barh(idx, transporting_duration, left=start_transporting_time, color=transbot_color,
                         edgecolor="white",align="center")
 
-
     # Configure axes
     ax.set_xlim(time_window[0], max_end_time)
     ax.set_ylim(-0.5, len(local_result.jobs) - 0.5)
     ax.set_xlabel("Time")
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticklabels)
-    ax.set_title("Local Result Gantt Chart by Resource")
+    ax.set_title("Local Result Gantt Chart")
 
-    # Add a red dashed line at the end of the time window
-    ax.axvline(x=time_window[1], color="red", linestyle="--", linewidth=2, label="Time Window End")
+    # # Add a red dashed line at the end of the time window
+    # ax.axvline(x=time_window[1], color="red", linestyle="--", linewidth=2, label="Time Window End")
 
     # Create a legend for the resources
     legend_patches = [Patch(color=color, label=resource) for resource, color in resource_color_map.items()]
