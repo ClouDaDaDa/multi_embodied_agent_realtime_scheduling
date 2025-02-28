@@ -883,6 +883,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         # 4 (Low battery):
         elif current_transbot.agv_status == 4:
             if current_transbot.current_task != -1:
+                # todo: when to check the low battery status?
                 raise ValueError(f"The transbot {current_transbot.agv_id} should go to charge!")
             else:
                 charging_station_location = self.factory_instance.factory_graph.pickup_dropoff_points[

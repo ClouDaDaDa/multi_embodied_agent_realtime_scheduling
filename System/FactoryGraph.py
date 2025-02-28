@@ -177,6 +177,7 @@ class FactoryGraph:
         given_direction = (occupied_location[0] - current_location[0],
                            occupied_location[1] - current_location[1])
 
+        # todo: check whether the given_direction is valid
         # Starting from given_direction, check the other three directions clockwise
         start_idx = directions.index(given_direction)
 

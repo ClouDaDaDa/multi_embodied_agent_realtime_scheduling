@@ -48,7 +48,9 @@ if __name__ == "__main__":
 
     func("Env instance created.")
 
-    num_episodes = 100
+    num_episodes = 1000
+
+    best_makespan = 2000
 
     for episode in range(num_episodes):
         print(f"\nStarting episode {episode + 1}")
@@ -100,5 +102,11 @@ if __name__ == "__main__":
         print(f"Estimated makespan = {scheduling_env.initial_estimated_makespan}")
         print(f"Total reward for episode {episode + 1}: {total_rewards['machine0']}")
 
+        if best_makespan > scheduling_env.current_time_after_step:
+            best_makespan = scheduling_env.current_time_after_step
+
         func("Local Scheduling completed.")
 
+        print(f"Best makespan up to now is {best_makespan}.")
+
+    print(f"Best makespan across {num_episodes} episodes is {best_makespan}.")
