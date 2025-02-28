@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     example_env = LocalSchedulingMultiAgentEnv(env_config)
 
-    train_batch_size = 50 * (example_env.num_machines + example_env.num_transbots) * int(local_schedule.local_makespan)
+    train_batch_size = 5 * (example_env.num_machines + example_env.num_transbots) * int(local_schedule.local_makespan)
 
     base_config = (
         PPOConfig()
@@ -54,19 +54,19 @@ if __name__ == "__main__":
             env_config=env_config,
         )
         .env_runners(
-            num_env_runners=50,
+            num_env_runners=10,
             batch_mode="complete_episodes",
         )
         .training(
             train_batch_size_per_learner=train_batch_size,
             minibatch_size=(example_env.num_machines + example_env.num_transbots) * int(local_schedule.local_makespan),
             entropy_coeff=0.01,
-            # num_epochs=
-            lr=1e-5,
+            num_epochs=5,
+            lr=1e-4,
         )
         .learners(
             num_learners=1,
-            num_cpus_per_learner=5,
+            num_cpus_per_learner=1,
             num_gpus_per_learner=0,
         )
         .rl_module(
