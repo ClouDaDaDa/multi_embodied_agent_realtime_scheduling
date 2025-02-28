@@ -1,5 +1,7 @@
 # from memory_profiler import profile
 # @profile
+import numpy as np
+
 from configs import dfjspt_params
 
 
@@ -50,7 +52,7 @@ if __name__ == "__main__":
 
     num_episodes = 1000
 
-    best_makespan = 2000
+    makespans = []
 
     for episode in range(num_episodes):
         print(f"\nStarting episode {episode + 1}")
@@ -102,11 +104,13 @@ if __name__ == "__main__":
         print(f"Estimated makespan = {scheduling_env.initial_estimated_makespan}")
         print(f"Total reward for episode {episode + 1}: {total_rewards['machine0']}")
 
-        if best_makespan > scheduling_env.current_time_after_step:
-            best_makespan = scheduling_env.current_time_after_step
+        makespans.append(scheduling_env.current_time_after_step)
 
         func("Local Scheduling completed.")
 
-        print(f"Best makespan up to now is {best_makespan}.")
+        print(f"Min makespan up to now is {np.min(makespans)}.")
+        print(f"Average makespan up to now is {np.average(makespans)}.")
 
-    print(f"Best makespan across {num_episodes} episodes is {best_makespan}.")
+
+    print(f"Min makespan across {num_episodes} episodes is {np.min(makespans)}.")
+    print(f"Average makespan across {num_episodes} episodes is {np.average(makespans)}.")
