@@ -12,7 +12,7 @@ from local_realtime_scheduling.InterfaceWithGlobal.divide_global_schedule_to_loc
 
 
 parser = add_default_args(
-    default_iters=200,
+    default_iters=500,
     default_reward=10,
 )
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
               "rb") as file:
         local_schedule = pickle.load(file)
 
-    print(vars(local_schedule))
+    # print(vars(local_schedule))
 
     env_config = {
         "n_machines": dfjspt_params.n_machines,
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     example_env = LocalSchedulingMultiAgentEnv(env_config)
 
-    train_batch_size = 10 * (example_env.num_machines + example_env.num_transbots) * int(local_schedule.local_makespan)
+    train_batch_size = 20 * (example_env.num_machines + example_env.num_transbots) * int(local_schedule.local_makespan)
 
     base_config = (
         PPOConfig()
@@ -54,11 +54,15 @@ if __name__ == "__main__":
             env_config=env_config,
         )
         .env_runners(
-            num_env_runners=1,
+            num_env_runners=40,
             batch_mode="complete_episodes",
         )
         .training(
             train_batch_size_per_learner=train_batch_size,
+            minibatch_size=(example_env.num_machines + example_env.num_transbots) * int(local_schedule.local_makespan),
+            entropy_coeff=0.01,
+            num_epochs=10,
+            lr=1e-5,
         )
         .learners(
             num_learners=1,

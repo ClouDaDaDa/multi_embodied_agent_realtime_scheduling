@@ -6,6 +6,10 @@ Add the following code into `python3.10/site-packages/ray/rllib/core/models/cata
 1) Before Class `catalog`:
 
 ```
+from gymnasium import spaces
+```
+
+```
 class NestedModelConfig(ModelConfig):
     """Custom ModelConfig for handling nested observation spaces (Dict)."""
 
