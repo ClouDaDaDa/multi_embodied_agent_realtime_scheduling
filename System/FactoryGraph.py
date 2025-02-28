@@ -52,7 +52,7 @@ class FactoryGraph:
 
         self.height = charging_station_1_y_index + 1
 
-        print(f"pickup_dropoff_points: {self.pickup_dropoff_points}")
+        # print(f"pickup_dropoff_points: {self.pickup_dropoff_points}")
 
         # Initialize nodes as walkable by default
         self.nodes = [[Node(x, y) for y in range(self.height)] for x in range(self.width)]

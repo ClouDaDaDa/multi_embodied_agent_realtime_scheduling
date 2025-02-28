@@ -711,7 +711,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
 
             if self._check_machine_finish_task(machine_id=machine_index):
                 current_machine.finish_processing(finish_time=self.current_time_after_step)
-                self.rewards[f'machine{current_machine.machine_id}'] += 0.01
+                self.rewards[f'machine{current_machine.machine_id}'] += 0.1
                 current_job.finish_processing(finish_time=self.current_time_after_step)
                 self.local_result.jobs[current_job.job_id].operations[
                     current_job.current_processing_operation - 1
@@ -1084,7 +1084,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                         current_job.current_processing_operation
                     ].actual_finish_transporting_time = self.current_time_after_step
                     current_transbot.finish_loaded_transporting(finish_time=self.current_time_after_step)
-                    self.rewards[f'transbot{current_transbot.agv_id}'] += 0.01
+                    self.rewards[f'transbot{current_transbot.agv_id}'] += 0.1
                 else:
                     # Mark the new position of the transbot as an obstacle
                     self.factory_instance.factory_graph.set_obstacle(location=current_transbot.current_location)
@@ -1482,7 +1482,7 @@ if __name__ == "__main__":
         "n_jobs": dfjspt_params.n_jobs,
         "n_transbots": dfjspt_params.n_transbots,
         "local_schedule": local_schedule,
-        "local_result_file": result_file_name,
+        # "local_result_file": result_file_name,
         # "render_mode": "human",
     }
 
