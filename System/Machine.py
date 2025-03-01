@@ -18,7 +18,7 @@ class Machine:
         # Static features of the machine
         self.machine_id = machine_id
         self.location = location
-        self.noise_std = 0.01
+        self.noise_std = 0.0001
         self.failure_threshold = failure_threshold
         # check if degradation_type is valid
         # if ...:
@@ -103,12 +103,13 @@ class Machine:
     def update_degradation_process(self, degrading_time=1.0):
         # todo: how to model the degradation process: new_reliability = f(degrading_time, reliability)
         # reliability (without noise) is 1.0 - degradation
+        self.dummy_work_time += degrading_time
         reliability = 1.0 - self.degradation_model.degradation_function(current_life=self.dummy_work_time)
         noise = np.random.normal(0, self.noise_std)
+        # noise = 0.0
         self.reliability = max(0.0, min(1.0, reliability + noise))
         self.cumulative_total_time += degrading_time
         self.cumulative_work_time += degrading_time
-        self.dummy_work_time += degrading_time
         self.estimated_remaining_time_to_finish -= degrading_time
         self.update_reliability_history(self.cumulative_total_time, self.reliability)
 

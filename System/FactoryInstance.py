@@ -24,7 +24,7 @@ class FactoryInstance:
                     "type": "weibull",
                     "parameters": {
                         "shape": np.random.uniform(low=0.8, high=3.0),
-                        "scale": np.random.uniform(low=500, high=3000),
+                        "scale": np.random.uniform(low=300, high=600),
                     }
                 },
                 # location=self.factory_graph.pickup_dropoff_points[f"machine_{k}"]

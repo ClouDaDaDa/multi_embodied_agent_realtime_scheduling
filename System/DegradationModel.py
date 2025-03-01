@@ -25,6 +25,9 @@ class DegradationModel:
             scale = self.degradation_parameters["scale"]
             return 1 - np.exp(- (current_life / scale) ** shape)
 
+            # 0.7 = 1 - 0.3
+            # 0.3 = e^(- (current_life / scale) ^ shape)
+
         # elif self.degradation_type == "lognormal":
         #     mean = self.degradation_parameters["mean"]
         #     sigma = self.degradation_parameters["sigma"]

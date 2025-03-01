@@ -44,7 +44,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 func("import part 3")
 
 
-class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
+class InitialScheduleEnv(MultiAgentEnv):
     """
     A Multi-agent Environment for Integrated Production, Transportation and Maintenance Real-time Scheduling.
     """
@@ -60,7 +60,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         n_jobs
         local_schedule
         """
-        super(LocalSchedulingMultiAgentEnv, self).__init__()
+        super(InitialScheduleEnv, self).__init__()
 
         func("Env initialized.")
 
@@ -363,9 +363,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.max_operations = max(job.operations_matrix.shape[0] for job in self.scheduling_instance.jobs)
         self.MAX_MAINTENANCE_COUNTS = sum(job.num_total_processing_operations for job in self.scheduling_instance.jobs)
         self.initial_estimated_makespan = self.local_schedule.local_makespan
-        # self.time_upper_bound = self.initial_estimated_makespan * 5
-        self.estimated_makespan = 820
-        self.time_upper_bound = 5 * self.initial_estimated_makespan
+        self.time_upper_bound = self.initial_estimated_makespan * 5
         self.current_time_before_step = self.local_schedule.time_window_start
         self.current_time_after_step = self.local_schedule.time_window_start
         self.reward_this_step = 0.0
@@ -1678,7 +1676,7 @@ if __name__ == "__main__":
         # "render_mode": "human",
     }
 
-    scheduling_env = LocalSchedulingMultiAgentEnv(config)
+    scheduling_env = InitialScheduleEnv(config)
 
     func("Env instance created.")
 
