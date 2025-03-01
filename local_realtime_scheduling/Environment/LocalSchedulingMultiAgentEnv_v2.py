@@ -2,9 +2,13 @@
 # @profile
 import os
 import pickle
+from collections import deque
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as pch
 import matplotlib.cm as cm
+from matplotlib import animation
+
 from local_realtime_scheduling.Environment.ExecutionResult import LocalResult, Local_Job_result, Operation_result
 from local_realtime_scheduling.Environment.path_planning import a_star_search
 from local_realtime_scheduling.InterfaceWithGlobal.divide_global_schedule_to_local_from_pkl import LocalSchedule, Local_Job_schedule
@@ -1223,53 +1227,230 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         else:
             return False
 
+    def _update_anim_machine_data(self):
+        """
+        Update machine data for the current time step.
+        """
+        # Example of adding new data to each machine's attributes (real data should come from your system)
+        self.anim_time_steps.append(self.current_time_after_step)
+
+        # Add machine data (these are just example values, replace with actual machine status)
+        machine = self.factory_instance.machines[0]
+        self.machine_data["machine0"]["machine_status"].append(machine.machine_status)
+        self.machine_data["machine0"]["machine_reliability"].append(machine.reliability)
+        self.machine_data["machine0"]["machine_estimated_time_to_finish"].append(
+            machine.estimated_remaining_time_to_finish)
+
+        # Add transbot data (these are just example values, replace with actual transbot status)
+        transbot = self.factory_instance.agv[0]
+        self.transbot_data["transbot0"]["transbot_status"].append(transbot.agv_status)
+        self.transbot_data["transbot0"]["transbot_SOC"].append(transbot.battery.soc)
+        self.transbot_data["transbot0"]["transbot_estimated_time_to_finish"].append(
+            transbot.estimated_remaining_time_to_finish)
+
     def render(self):
         """
         Render the factory layout for the current time step.
         This method visualizes the current state of the factory, including machines, transbots, and jobs.
         """
 
-        if self.render_mode is None:
-            logging.warning("You are calling render method without specifying any render mode.")
-            return None
-
-        if self.render_mode not in ["human", "rgb_array"]:
-            raise NotImplementedError(f"Render mode '{self.render_mode}' is not supported.")
-
-        if self.resetted:
-            plt.ion()  # Enable interactive mode
-            self.fig, self.ax = plt.subplots(figsize=self.figsize)
-            self.ax.set_xlim(-1, self.factory_instance.factory_graph.width + 1)
-            self.ax.set_ylim(-1, self.factory_instance.factory_graph.height + 1)
-            # self.plot_size = 100 * (self.factory_instance.factory_graph.width + self.factory_instance.factory_graph.height) / 2
-            # self.plot_size = 25 * np.pi
-            self.ax.set_xlabel("X Position")
-            self.ax.set_ylabel("Y Position")
-            x_ticks = range(-1, self.factory_instance.factory_graph.width + 1, 1)
-            y_ticks = range(-1, self.factory_instance.factory_graph.height + 1, 1)
-            self.ax.set_xticks(x_ticks)
-            self.ax.set_yticks(y_ticks)
-            self.ax.set_aspect('equal', adjustable='box')
-            # self.ax.grid(True, linestyle='--', linewidth=0.5)
-            self.fig.subplots_adjust(right=0.6)
-
-            # # Initialize lists for each category's handles and labels
-            # self.job_handles, self.job_labels = [], []
-            # self.machine_handles, self.machine_labels = [], []
-            # self.transbot_handles, self.transbot_labels = [], []
-
-        # Update dynamic elements: transbots and jobs
         if self.all_agents_have_made_decisions or self.resetted:
+
+            if self.render_mode is None:
+                logging.warning("You are calling render method without specifying any render mode.")
+                return None
+
+            if self.render_mode not in ["human", "rgb_array"]:
+                raise NotImplementedError(f"Render mode '{self.render_mode}' is not supported.")
+
+            if self.resetted:
+                plt.ion()  # Enable interactive mode
+                self.fig, self.ax = plt.subplots(figsize=self.figsize)
+                self.ax.set_xlim(-1, self.factory_instance.factory_graph.width + 1)
+                self.ax.set_ylim(-1, self.factory_instance.factory_graph.height + 1)
+                # self.plot_size = 100 * (self.factory_instance.factory_graph.width + self.factory_instance.factory_graph.height) / 2
+                # self.plot_size = 25 * np.pi
+                self.ax.set_xlabel("X Position")
+                self.ax.set_ylabel("Y Position")
+                x_ticks = range(-1, self.factory_instance.factory_graph.width + 1, 1)
+                y_ticks = range(-1, self.factory_instance.factory_graph.height + 1, 1)
+                self.ax.set_xticks(x_ticks)
+                self.ax.set_yticks(y_ticks)
+                self.ax.set_aspect('equal', adjustable='box')
+                # self.ax.grid(True, linestyle='--', linewidth=0.5)
+                self.fig.subplots_adjust(right=0.6)
+
+                # # Initialize lists for each category's handles and labels
+                # self.job_handles, self.job_labels = [], []
+                # self.machine_handles, self.machine_labels = [], []
+                # self.transbot_handles, self.transbot_labels = [], []
+
+                self.anim_time_steps = deque(maxlen=100)
+
+                self.fig_dynamic, self.ax_dynamic = plt.subplots(3, 2, figsize=(10, 8))
+                self.anim = None
+
+                # 3 subplots for different attributes
+                # self.machine_fig_dynamic, self.machine_ax_dynamic = plt.subplots(3, 1, figsize=(10, 8))
+                # self.machine_anim = None
+                self.machine_data = {
+                    "machine0": {
+                        "machine_status": deque(maxlen=100),
+                        "machine_reliability": deque(maxlen=100),
+                        "machine_estimated_time_to_finish": deque(maxlen=100)
+                    }
+                }
+                # self.transbot_fig_dynamic, self.transbot_ax_dynamic = plt.subplots(3, 1, figsize=(10, 8))
+                # self.transbot_anim = None
+                self.transbot_data = {
+                    "transbot0": {
+                        "transbot_status": deque(maxlen=100),
+                        "transbot_SOC": deque(maxlen=100),
+                        "transbot_estimated_time_to_finish": deque(maxlen=100)
+                    }
+                }
+
+            # Update dynamic elements: transbots and jobs
             self._update_dynamic_elements()
 
-        if self.render_mode == "human":
-            # Redraw and pause for real-time display
-            self.fig.canvas.draw()
-            self.fig.canvas.flush_events()
-            plt.pause(1 / self.metadata["render_fps"])
+            if self.render_mode == "human":
+                if self.anim is None:
+                    self._init_animation()
 
-        elif self.render_mode == "rgb_array":
-            raise NotImplementedError(f"Render mode '{self.render_mode}' is not supported.")
+                # # Initialize the dynamic machine data animation
+                # if self.machine_anim is None:
+                #     self._init_machine_animation()
+                # if self.transbot_anim is None:
+                #     self._init_transbot_animation()
+
+                # Render the dynamic machine data plot
+                plt.show()
+
+                # Redraw and pause for real-time display
+                self.fig.canvas.draw()
+                self.fig.canvas.flush_events()
+                plt.pause(1 / self.metadata["render_fps"])
+
+            elif self.render_mode == "rgb_array":
+                raise NotImplementedError(f"Render mode '{self.render_mode}' is not supported.")
+
+    def _init_animation(self):
+        """
+        Initialize the animation object for dynamic updates.
+        """
+        def update(frame):
+            # Update the data for each machine
+            self._update_anim_machine_data()
+
+            # Update each subplot
+            for idx, (attr, ax) in enumerate(
+                    zip(["machine_status", "machine_reliability", "machine_estimated_time_to_finish"],
+                        self.ax_dynamic[:, 0])):
+                ax.clear()  # Clear the current axis to redraw
+
+                # Get the last 10 time steps data for the current attribute
+                data = self.machine_data["machine0"][attr]
+
+                # Plot the data on the corresponding subplot
+                ax.plot(self.anim_time_steps, data, label=f'{attr}')
+                ax.set_title(f'{attr} of machine0')
+                ax.set_xlabel('Time Step')
+                ax.set_ylabel(attr)
+                ax.legend(loc='upper left')
+
+                # Set the fixed y-limits for each machine subplot
+                if attr == "machine_status":
+                    ax.set_ylim([-0.1, 3.1])
+                # elif attr == "machine_reliability":
+                #     ax.set_ylim([0.3, 1.0])
+                # elif attr == "machine_estimated_time_to_finish":
+                #     ax.set_ylim([-1, 100])
+
+            for idx, (attr, ax) in enumerate(
+                    zip(["transbot_status", "transbot_SOC", "transbot_estimated_time_to_finish"],
+                        self.ax_dynamic[:, 1])):
+                ax.clear()  # Clear the current axis to redraw
+
+                # Get the last 10 time steps data for the current attribute
+                data = self.transbot_data["transbot0"][attr]
+
+                # Plot the data on the corresponding subplot
+                ax.plot(self.anim_time_steps, data, label=f'{attr}')
+                ax.set_title(f'{attr} of transbot0')
+                ax.set_xlabel('Time Step')
+                ax.set_ylabel(attr)
+                ax.legend(loc='upper left')
+
+                # Set the fixed y-limits for each transbot subplot
+                if attr == "transbot_status":
+                    ax.set_ylim([-0.1, 4.1])
+                # elif attr == "transbot_SOC":
+                #     ax.set_ylim([0.3, 1.0])
+                # elif attr == "transbot_estimated_time_to_finish":
+                #     ax.set_ylim([-1, 100])
+
+            return [ax for ax in self.ax_dynamic]  # Return all axes for animation
+
+        self.anim = animation.FuncAnimation(self.fig_dynamic, update, frames=100,
+                                            interval=1000 / self.metadata["render_fps"], blit=False)
+
+    def _init_machine_animation(self):
+        """
+        Initialize the animation object for dynamic updates.
+        """
+        def update(frame):
+            # Update the data for each machine
+            # self._update_anim_machine_data()
+
+            # Update each subplot
+            for idx, (attr, ax) in enumerate(
+                    zip(["machine_status", "machine_reliability", "machine_estimated_time_to_finish"],
+                        self.machine_ax_dynamic)):
+                ax.clear()  # Clear the current axis to redraw
+
+                # Get the last 10 time steps data for the current attribute
+                data = self.machine_data["machine0"][attr]
+
+                # Plot the data on the corresponding subplot
+                ax.plot(self.anim_time_steps, data, label=f'{attr} over time')
+                ax.set_title(f'{attr} of machine0')
+                ax.set_xlabel('Time Step')
+                ax.set_ylabel(attr)
+                ax.legend(loc='upper left')
+
+            return [ax for ax in self.machine_ax_dynamic]  # Return all axes for animation
+
+        self.machine_anim = animation.FuncAnimation(self.machine_fig_dynamic, update, frames=100,
+                                                    interval=1000 / self.metadata["render_fps"], blit=False)
+
+    def _init_transbot_animation(self):
+        """
+        Initialize the animation object for dynamic updates.
+        """
+        def update(frame):
+            # Update the data for each transbot
+            # self._update_anim_transbot_data()
+
+            # Update each subplot
+            for idx, (attr, ax) in enumerate(
+                    zip(["transbot_status", "transbot_SOC", "transbot_estimated_time_to_finish"],
+                        self.transbot_ax_dynamic)):
+                ax.clear()  # Clear the current axis to redraw
+
+                # Get the last 10 time steps data for the current attribute
+                data = self.transbot_data["transbot0"][attr]
+
+                # Plot the data on the corresponding subplot
+                ax.plot(self.anim_time_steps, data, label=f'{attr} over time')
+                ax.set_title(f'{attr} of transbot0')
+                ax.set_xlabel('Time Step')
+                ax.set_ylabel(attr)
+                ax.legend(loc='upper left')
+
+            return [ax for ax in self.transbot_ax_dynamic]  # Return all axes for animation
+
+        self.transbot_anim = animation.FuncAnimation(self.transbot_fig_dynamic, update, frames=100,
+                                                    interval=1000 / self.metadata["render_fps"], blit=False)
 
     def close(self):
         if self.fig is not None:
