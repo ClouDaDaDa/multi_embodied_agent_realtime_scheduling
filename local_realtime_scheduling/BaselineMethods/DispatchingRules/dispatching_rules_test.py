@@ -112,5 +112,5 @@ if __name__ == "__main__":
         print(f"Average makespan up to now is {np.average(makespans)}.")
 
 
-    print(f"Min makespan across {num_episodes} episodes is {np.min(makespans)}.")
+    print(f"\nMin makespan across {num_episodes} episodes is {np.min(makespans)}.")
     print(f"Average makespan across {num_episodes} episodes is {np.average(makespans)}.")

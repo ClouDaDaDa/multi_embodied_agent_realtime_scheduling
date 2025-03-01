@@ -359,7 +359,9 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.max_operations = max(job.operations_matrix.shape[0] for job in self.scheduling_instance.jobs)
         self.MAX_MAINTENANCE_COUNTS = sum(job.num_total_processing_operations for job in self.scheduling_instance.jobs)
         self.initial_estimated_makespan = self.local_schedule.local_makespan
-        self.time_upper_bound = self.initial_estimated_makespan * 5
+        # self.time_upper_bound = self.initial_estimated_makespan * 5
+        self.estimated_makespan = 820
+        self.time_upper_bound = 5 * self.initial_estimated_makespan
         self.current_time_before_step = self.local_schedule.time_window_start
         self.current_time_after_step = self.local_schedule.time_window_start
         self.reward_this_step = 0.0
