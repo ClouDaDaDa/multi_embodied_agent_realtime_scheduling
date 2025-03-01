@@ -44,7 +44,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 func("import part 3")
 
 
-class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
+class InitialScheduleEnv(MultiAgentEnv):
     """
     A Multi-agent Environment for Integrated Production, Transportation and Maintenance Real-time Scheduling.
     """
@@ -60,7 +60,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         n_jobs
         local_schedule
         """
-        super(LocalSchedulingMultiAgentEnv, self).__init__()
+        super(InitialScheduleEnv, self).__init__()
 
         func("Env initialized.")
 
@@ -1676,7 +1676,7 @@ if __name__ == "__main__":
         # "render_mode": "human",
     }
 
-    scheduling_env = LocalSchedulingMultiAgentEnv(config)
+    scheduling_env = InitialScheduleEnv(config)
 
     func("Env instance created.")
 
