@@ -25,6 +25,9 @@ def transbot_agent_heuristics(transbot_obs):
     invalid_action_penalties = (1 - action_mask) * 1e8
     if transbot_obs["observation"]["transbot_features"][0] != 4:
         invalid_action_penalties[num_jobs] = 1e4
+    #     print(f"transbot need not go charging.")
+    # else:
+    #     print(f"transbot should go charging.")
     # Cannot do nothing when idling
     if transbot_obs["observation"]["transbot_features"][0] == 0:
         invalid_action_penalties[num_jobs + 1] = 1e3
