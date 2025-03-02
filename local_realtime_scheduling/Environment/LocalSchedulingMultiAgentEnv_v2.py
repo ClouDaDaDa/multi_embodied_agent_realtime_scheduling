@@ -422,9 +422,16 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                     local_schedule_job_operation.assigned_machine
                 ].processing_tasks_queue_for_current_time_window.append((job_id, operation_id))
                 if local_schedule_job_operation.assigned_transbot is not None:
-                    self.factory_instance.agv[
-                        local_schedule_job_operation.assigned_transbot
-                    ].transport_tasks_queue_for_current_time_window.append((job_id, operation_id))
+                    if operation_id == 0:
+                        self.factory_instance.agv[
+                            local_schedule_job_operation.assigned_transbot
+                        ].transport_tasks_queue_for_current_time_window.append((job_id, operation_id))
+                    else:
+                        if local_schedule_job.operations[operation_id].assigned_machine != \
+                                local_schedule_job.operations[operation_id - 1].assigned_machine:
+                            self.factory_instance.agv[
+                                local_schedule_job_operation.assigned_transbot
+                            ].transport_tasks_queue_for_current_time_window.append((job_id, operation_id))
 
             if len(this_job.processing_operations_for_current_time_window) > 0:
                 this_job.current_processing_operation = this_job.processing_operations_for_current_time_window[0]
@@ -444,6 +451,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         observations, self.rewards, terminated, truncated, infos = {}, {}, {}, {}, {}
         self.reward_this_step = 0.0
         self.resetted = False
+        self.all_agents_have_made_decisions = False
 
         # print(action_dict)
         if len(action_dict) != 1:  # Only one agent make action in one step()

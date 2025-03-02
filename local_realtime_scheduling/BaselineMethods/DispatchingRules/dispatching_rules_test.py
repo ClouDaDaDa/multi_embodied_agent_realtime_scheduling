@@ -31,6 +31,11 @@ if __name__ == "__main__":
                        f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
                        + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}.pkl"
 
+    init_schedule_result_file_name = os.path.dirname(os.path.dirname(current_dir)) + \
+                       "/local_results/local_result_" + \
+                       f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
+                       + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}_init_schedule.pkl"
+
     with open(local_schedule_file,
               "rb") as file:
         local_schedule = pickle.load(file)
@@ -43,6 +48,7 @@ if __name__ == "__main__":
         "n_transbots": dfjspt_params.n_transbots,
         "local_schedule": local_schedule,
         # "local_result_file": result_file_name,
+        "local_result_file": init_schedule_result_file_name,
         # "render_mode": "human",
     }
 
@@ -51,7 +57,7 @@ if __name__ == "__main__":
 
     func("Env instance created.")
 
-    num_episodes = 10
+    num_episodes = 1
 
     makespans = []
 

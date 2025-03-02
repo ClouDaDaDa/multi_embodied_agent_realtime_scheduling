@@ -14,7 +14,7 @@ plt.rcParams['ytick.labelsize'] = 14   # y-axis tick label font size
 plt.rcParams['legend.fontsize'] = 14   # Legend font size
 
 
-def plot_local_gantt(local_schedule):
+def plot_local_gantt(local_schedule, save_fig_dir=None):
     """
     Plot a Gantt chart with operations colored by their assigned resources (e.g., machines or transbots).
 
@@ -96,10 +96,12 @@ def plot_local_gantt(local_schedule):
     ax.legend(handles=legend_patches, title="Resources", loc="upper right", bbox_to_anchor=(1.15, 1))
 
     plt.tight_layout()
+    if save_fig_dir is not None:
+        plt.savefig(save_fig_dir + "_gantt.png")
     plt.show()
 
 
-def plot_local_gantt_by_resource(local_schedule):
+def plot_local_gantt_by_resource(local_schedule, save_fig_dir=None):
     """
     Plot a Gantt chart with the y-axis representing manufacturing resources (e.g., machines or transbots),
     sorted by resource type and ID (e.g., Transbot 0, Transbot 1, ..., Machine 0, Machine 1, ...).
@@ -217,6 +219,8 @@ def plot_local_gantt_by_resource(local_schedule):
     plt.xlim(local_schedule.time_window_start, max_end_time * 1.02)
 
     plt.tight_layout()
+    if save_fig_dir is not None:
+        plt.savefig(save_fig_dir + "_gantt_by_resource.png")
     plt.show()
 
 
@@ -227,13 +231,14 @@ if __name__ == "__main__":
 
     # Load the LocalSchedule from the pkl file
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    local_schedule_file = os.path.dirname(current_dir) + \
+    local_schedule_file_dir = os.path.dirname(current_dir) + \
                           "/InterfaceWithGlobal/local_schedules/local_schedule_" + \
                           f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
-                          + f"I0_window{dfjspt_params.time_window_size}/window_0.pkl"
+                          + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}"
+    local_schedule_file = local_schedule_file_dir + f".pkl"
 
     with open(local_schedule_file,
               "rb") as file:
         local_schedule = pickle.load(file)
-    plot_local_gantt_by_resource(local_schedule)
-    plot_local_gantt(local_schedule)
+    plot_local_gantt_by_resource(local_schedule, save_fig_dir=local_schedule_file_dir)
+    plot_local_gantt(local_schedule, save_fig_dir=local_schedule_file_dir)

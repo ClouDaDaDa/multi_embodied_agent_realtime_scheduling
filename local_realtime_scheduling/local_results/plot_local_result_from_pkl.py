@@ -15,7 +15,7 @@ plt.rcParams['ytick.labelsize'] = 14   # y-axis tick label font size
 plt.rcParams['legend.fontsize'] = 14   # Legend font size
 
 
-def plot_local_result_gantt(local_result):
+def plot_local_result_gantt(local_result, save_fig_dir=None):
     """
     Plot a Gantt chart with operations colored by their assigned resources (e.g., machines or transbots).
 
@@ -92,10 +92,12 @@ def plot_local_result_gantt(local_result):
     ax.legend(handles=legend_patches, title="Resources", loc="upper right", bbox_to_anchor=(1.15, 1))
 
     plt.tight_layout()
+    if save_fig_dir is not None:
+        plt.savefig(save_fig_dir + "_gantt.png")
     plt.show()
 
 
-def plot_local_result_gantt_by_resource(local_result):
+def plot_local_result_gantt_by_resource(local_result, save_fig_dir=None):
     """
     Plot a Gantt chart with the y-axis representing manufacturing resources (e.g., machines or transbots),
     sorted by resource type and ID (e.g., Transbot 0, Transbot 1, ..., Machine 0, Machine 1, ...).
@@ -202,6 +204,8 @@ def plot_local_result_gantt_by_resource(local_result):
     plt.xlim(local_result.time_window_start, max_end_time * 1.02)
 
     plt.tight_layout()
+    if save_fig_dir is not None:
+        plt.savefig(save_fig_dir + "_gantt_by_resource.png")
     plt.show()
 
 
@@ -212,14 +216,22 @@ if __name__ == "__main__":
 
     # Load the LocalSchedule from the pkl file
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    result_file_name = current_dir + \
+    local_result_file_dir = current_dir + \
                             "/local_result_" + \
                             f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
-                            + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}.pkl"
+                            + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}"
+
+    init_schedule_local_result_file_dir = current_dir + \
+                            "/local_result_" + \
+                            f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
+                            + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}_init_schedule"
+
+    # result_file_name = local_result_file_dir + ".pkl"
+    result_file_name = init_schedule_local_result_file_dir + ".pkl"
 
     with open(result_file_name,
               "rb") as file:
         local_result = pickle.load(file)
-    plot_local_result_gantt_by_resource(local_result)
-    plot_local_result_gantt(local_result)
+    plot_local_result_gantt_by_resource(local_result, save_fig_dir=init_schedule_local_result_file_dir)
+    plot_local_result_gantt(local_result, save_fig_dir=init_schedule_local_result_file_dir)
 

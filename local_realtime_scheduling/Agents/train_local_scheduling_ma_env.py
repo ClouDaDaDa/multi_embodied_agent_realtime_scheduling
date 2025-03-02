@@ -62,12 +62,12 @@ if __name__ == "__main__":
             train_batch_size_per_learner=train_batch_size,
             minibatch_size=(example_env.num_machines + example_env.num_transbots) * int(example_env.estimated_makespan),
             entropy_coeff=0.01,
-            num_epochs=10,
+            num_epochs=20,
             lr=1e-5,
         )
         .learners(
             num_learners=1,
-            num_cpus_per_learner=1,
+            num_cpus_per_learner=5,
             num_gpus_per_learner=0,
         )
         .rl_module(
