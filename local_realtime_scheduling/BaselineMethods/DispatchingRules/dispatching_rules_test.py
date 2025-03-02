@@ -48,7 +48,7 @@ if __name__ == "__main__":
         "n_transbots": dfjspt_params.n_transbots,
         "local_schedule": local_schedule,
         # "local_result_file": result_file_name,
-        "local_result_file": init_schedule_result_file_name,
+        # "local_result_file": init_schedule_result_file_name,
         # "render_mode": "human",
     }
 
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     func("Env instance created.")
 
-    num_episodes = 1
+    num_episodes = 100
 
     makespans = []
 
