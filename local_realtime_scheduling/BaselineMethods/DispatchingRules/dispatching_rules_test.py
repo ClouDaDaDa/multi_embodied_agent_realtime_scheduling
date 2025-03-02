@@ -52,8 +52,8 @@ if __name__ == "__main__":
         # "render_mode": "human",
     }
 
-    # scheduling_env = LocalSchedulingMultiAgentEnv(config)
-    scheduling_env = InitialScheduleEnv(config)
+    scheduling_env = LocalSchedulingMultiAgentEnv(config)
+    # scheduling_env = InitialScheduleEnv(config)
 
     func("Env instance created.")
 

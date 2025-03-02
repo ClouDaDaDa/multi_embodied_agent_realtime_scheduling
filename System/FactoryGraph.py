@@ -178,6 +178,8 @@ class FactoryGraph:
                            occupied_location[1] - current_location[1])
 
         # todo: check whether the given_direction is valid
+        if given_direction not in directions:
+            raise ValueError(f"given_direction {given_direction} is invalid!")
         # Starting from given_direction, check the other three directions clockwise
         start_idx = directions.index(given_direction)
 

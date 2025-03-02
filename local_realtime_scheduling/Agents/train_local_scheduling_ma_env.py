@@ -46,7 +46,7 @@ if __name__ == "__main__":
     example_env = LocalSchedulingMultiAgentEnv(env_config)
     example_env.reset()
 
-    train_batch_size = 40 * (example_env.num_machines + example_env.num_transbots) * int(example_env.estimated_makespan)
+    train_batch_size = 2 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
 
     base_config = (
         PPOConfig()
@@ -56,18 +56,21 @@ if __name__ == "__main__":
         )
         .env_runners(
             num_env_runners=40,
+            num_envs_per_env_runner=1,
             batch_mode="complete_episodes",
+            rollout_fragment_length="auto",
+            sample_timeout_s=500,
         )
         .training(
             train_batch_size_per_learner=train_batch_size,
-            minibatch_size=(example_env.num_machines + example_env.num_transbots) * int(example_env.estimated_makespan),
+            minibatch_size=(example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound),
             entropy_coeff=0.01,
-            num_epochs=20,
+            num_epochs=5,
             lr=1e-5,
         )
         .learners(
-            num_learners=1,
-            num_cpus_per_learner=5,
+            num_learners=10,
+            num_cpus_per_learner=1,
             num_gpus_per_learner=0,
         )
         .rl_module(
@@ -124,6 +127,7 @@ if __name__ == "__main__":
     print(f"num_learners = {base_config.num_learners}")
     print(f"train_batch_size_per_learner = {base_config.train_batch_size_per_learner}")
     print(f"total_train_batch_size = {base_config.total_train_batch_size}")
+    print(f"sample_timeout_s = {base_config.sample_timeout_s}")
 
     # Run the example (with Tune).
     train_with_tune_pipeline(base_config, args)

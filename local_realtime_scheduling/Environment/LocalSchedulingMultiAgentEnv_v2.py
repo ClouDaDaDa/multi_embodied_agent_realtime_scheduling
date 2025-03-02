@@ -366,7 +366,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.initial_estimated_makespan = self.local_schedule.local_makespan
         # self.time_upper_bound = self.initial_estimated_makespan * 5
         self.estimated_makespan = 820
-        self.time_upper_bound = 5 * self.initial_estimated_makespan
+        self.time_upper_bound = 3 * self.initial_estimated_makespan
         self.current_time_before_step = self.local_schedule.time_window_start
         self.current_time_after_step = self.local_schedule.time_window_start
         self.reward_this_step = 0.0
@@ -420,42 +420,42 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                 ))
                 this_job.processing_operations_for_current_time_window.append(int(operation_id))
 
-                scheduled_processing_op = (job_id, operation_id,
-                                           local_schedule_job.operations[operation_id].scheduled_start_processing_time)
-                op_index = bisect.bisect_left([op[2] for op in self.factory_instance.machines[
-                    local_schedule_job_operation.assigned_machine
-                ].processing_tasks_queue_for_current_time_window],
-                                              local_schedule_job.operations[
-                                                  operation_id].scheduled_start_processing_time)
-                self.factory_instance.machines[
-                    local_schedule_job_operation.assigned_machine
-                ].processing_tasks_queue_for_current_time_window.insert(op_index, scheduled_processing_op)
-
-                if local_schedule_job_operation.assigned_transbot is not None:
-                    scheduled_transporting_op = (job_id, operation_id,
-                                                 local_schedule_job.operations[
-                                                     operation_id].scheduled_start_transporting_time)
-                    if operation_id == 0:
-                        op_index = bisect.bisect_left([op[2] for op in self.factory_instance.agv[
-                            local_schedule_job_operation.assigned_transbot
-                        ].transport_tasks_queue_for_current_time_window],
-                                                      local_schedule_job.operations[
-                                                          operation_id].scheduled_start_transporting_time)
-                        self.factory_instance.agv[
-                            local_schedule_job_operation.assigned_transbot
-                        ].transport_tasks_queue_for_current_time_window.insert(op_index, scheduled_transporting_op)
-
-                    else:
-                        if local_schedule_job.operations[operation_id].assigned_machine != \
-                                local_schedule_job.operations[operation_id - 1].assigned_machine:
-                            op_index = bisect.bisect_left([op[2] for op in self.factory_instance.agv[
-                                local_schedule_job_operation.assigned_transbot
-                            ].transport_tasks_queue_for_current_time_window],
-                                                          local_schedule_job.operations[
-                                                              operation_id].scheduled_start_transporting_time)
-                            self.factory_instance.agv[
-                                local_schedule_job_operation.assigned_transbot
-                            ].transport_tasks_queue_for_current_time_window.insert(op_index, scheduled_transporting_op)
+                # scheduled_processing_op = (job_id, operation_id,
+                #                            local_schedule_job.operations[operation_id].scheduled_start_processing_time)
+                # op_index = bisect.bisect_left([op[2] for op in self.factory_instance.machines[
+                #     local_schedule_job_operation.assigned_machine
+                # ].processing_tasks_queue_for_current_time_window],
+                #                               local_schedule_job.operations[
+                #                                   operation_id].scheduled_start_processing_time)
+                # self.factory_instance.machines[
+                #     local_schedule_job_operation.assigned_machine
+                # ].processing_tasks_queue_for_current_time_window.insert(op_index, scheduled_processing_op)
+                #
+                # if local_schedule_job_operation.assigned_transbot is not None:
+                #     scheduled_transporting_op = (job_id, operation_id,
+                #                                  local_schedule_job.operations[
+                #                                      operation_id].scheduled_start_transporting_time)
+                #     if operation_id == 0:
+                #         op_index = bisect.bisect_left([op[2] for op in self.factory_instance.agv[
+                #             local_schedule_job_operation.assigned_transbot
+                #         ].transport_tasks_queue_for_current_time_window],
+                #                                       local_schedule_job.operations[
+                #                                           operation_id].scheduled_start_transporting_time)
+                #         self.factory_instance.agv[
+                #             local_schedule_job_operation.assigned_transbot
+                #         ].transport_tasks_queue_for_current_time_window.insert(op_index, scheduled_transporting_op)
+                #
+                #     else:
+                #         if local_schedule_job.operations[operation_id].assigned_machine != \
+                #                 local_schedule_job.operations[operation_id - 1].assigned_machine:
+                #             op_index = bisect.bisect_left([op[2] for op in self.factory_instance.agv[
+                #                 local_schedule_job_operation.assigned_transbot
+                #             ].transport_tasks_queue_for_current_time_window],
+                #                                           local_schedule_job.operations[
+                #                                               operation_id].scheduled_start_transporting_time)
+                #             self.factory_instance.agv[
+                #                 local_schedule_job_operation.assigned_transbot
+                #             ].transport_tasks_queue_for_current_time_window.insert(op_index, scheduled_transporting_op)
 
             if len(this_job.processing_operations_for_current_time_window) > 0:
                 this_job.current_processing_operation = this_job.processing_operations_for_current_time_window[0]
@@ -929,7 +929,34 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         elif current_transbot.agv_status == 4:
             if current_transbot.current_task != -1:
                 # todo: when to check the low battery status?
-                raise ValueError(f"The transbot {current_transbot.agv_id} should go to charge!")
+                # raise ValueError(f"The transbot {current_transbot.agv_id} should go to charge!")
+                print(f"The transbot {current_transbot.agv_id} should go to charge!")
+
+                # If transbot changes its decision, release the binding relationship with the previous job
+                if current_transbot.current_task is not None:
+                    this_job = self.scheduling_instance.jobs[current_transbot.current_task]
+                    this_job.assigned_transbot = None
+                current_transbot.current_task = -1
+                charging_station_location = self.factory_instance.factory_graph.pickup_dropoff_points[
+                    self.factory_instance.factory_graph.nearest_charging_station(
+                        current_transbot.current_location
+                    )
+                ]
+                unload_path = a_star_search(
+                    graph=self.factory_instance.factory_graph,
+                    start=current_transbot.current_location,
+                    goal=charging_station_location
+                )
+                # print(
+                #     f"from {current_transbot.current_location} to {charging_station_location}, unload_path = {unload_path}")
+                current_transbot.start_unload_transporting(
+                    target_location=charging_station_location,
+                    unload_path=unload_path,
+                    start_time=self.current_time_before_step
+                )
+
+                self._handle_transbot_unload_move(current_transbot=current_transbot)
+
             else:
                 charging_station_location = self.factory_instance.factory_graph.pickup_dropoff_points[
                     self.factory_instance.factory_graph.nearest_charging_station(
@@ -1714,7 +1741,7 @@ if __name__ == "__main__":
 
     func("Env instance created.")
 
-    num_episodes = 1
+    num_episodes = 100
 
     for episode in range(num_episodes):
         print(f"\nStarting episode {episode + 1}")
