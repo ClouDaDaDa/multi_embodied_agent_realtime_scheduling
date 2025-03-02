@@ -15,7 +15,7 @@ from local_realtime_scheduling.Environment.LocalSchedulingMultiAgentEnv_v2 impor
 from local_realtime_scheduling.BaselineMethods.DispatchingRules.machine_agent_heuristics import machine_agent_heuristics
 from local_realtime_scheduling.BaselineMethods.DispatchingRules.transbot_agent_heuristics import transbot_agent_heuristics
 from local_realtime_scheduling.InterfaceWithGlobal.divide_global_schedule_to_local_from_pkl import LocalSchedule, Local_Job_schedule
-
+from local_realtime_scheduling.Environment.InitialScheduleEnv import InitialScheduleEnv
 
 # Example usage
 if __name__ == "__main__":
@@ -46,11 +46,12 @@ if __name__ == "__main__":
         # "render_mode": "human",
     }
 
-    scheduling_env = LocalSchedulingMultiAgentEnv(config)
+    # scheduling_env = LocalSchedulingMultiAgentEnv(config)
+    scheduling_env = InitialScheduleEnv(config)
 
     func("Env instance created.")
 
-    num_episodes = 1000
+    num_episodes = 10
 
     makespans = []
 

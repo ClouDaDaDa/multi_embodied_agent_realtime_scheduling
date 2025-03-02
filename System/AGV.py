@@ -158,23 +158,23 @@ class AGV:
         # self.check_reach_target()
         self.update_soc_history(self.cumulative_total_time, self.battery.soc)
 
-    def check_reach_target(self):
-        """
-        Check if the AGV has reached its target location and update its status accordingly.
-        """
-        if self.current_location == self.target_location:
-            if self.current_task >= 0:
-                self.agv_status = 0  # Set to idling
-                self.is_low_battery()
-            elif self.current_task == -1:
-                self.agv_status = 3  # Set to charging
-            else:
-                raise Exception(f"...!")
-
-            self.target_location = None
-            # self.current_transport_task = None
-            self.unload_path = []
-            self.loaded_path = []
+    # def check_reach_target(self):
+    #     """
+    #     Check if the AGV has reached its target location and update its status accordingly.
+    #     """
+    #     if self.current_location == self.target_location:
+    #         if self.current_task >= 0:
+    #             self.agv_status = 0  # Set to idling
+    #             self.is_low_battery()
+    #         elif self.current_task == -1:
+    #             self.agv_status = 3  # Set to charging
+    #         else:
+    #             raise Exception(f"...!")
+    #
+    #         self.target_location = None
+    #         # self.current_transport_task = None
+    #         self.unload_path = []
+    #         self.loaded_path = []
 
     def reset_agv(self):
         self.battery.reset_battery()

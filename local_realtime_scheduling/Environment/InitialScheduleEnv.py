@@ -213,19 +213,32 @@ class InitialScheduleEnv(MultiAgentEnv):
         # dynamic action masking (DAM) logic for the machine:
         # 1 for valid and 0 for invalid action
         machine_action_mask = np.zeros((self.num_machine_actions,), dtype=np.int32)
-        # idling: can choose a job, or perform a maintenance except CM, or do nothing
-        if machine.machine_status == 0:
-            machine_action_mask[self.num_jobs:self.num_jobs+3] = 1
-            machine_action_mask[self.num_jobs + 4] = 1
-        elif machine.machine_status == 1 or machine.machine_status == 2:
-        # processing or under maintenance: can choose a job, or do nothing
-            machine_action_mask[self.num_jobs + 4] = 1
-        elif machine.machine_status == 3:
-        # faulty: can perform CM or do nothing
-            machine_action_mask[self.num_jobs + 3:] = 1
+        # # idling: can choose a job, or perform a maintenance except CM, or do nothing
+        # if machine.machine_status == 0:
+        #     machine_action_mask[self.num_jobs + 4] = 1
+        # elif machine.machine_status == 1 or machine.machine_status == 2:
+        # # processing or under maintenance: can choose a job, or do nothing
+        #     machine_action_mask[self.num_jobs + 4] = 1
+        if machine.machine_status == 3:
+        # faulty: can perform CM
+            machine_action_mask[self.num_jobs + 3] = 1
 
-        if machine.reliability >= 0.8:
-            machine_action_mask[self.num_jobs:self.num_jobs+4] = 0
+        else:
+            if machine.current_processing_task is None:
+                if len(machine.processing_tasks_queue_for_current_time_window) > 0:
+                    if machine.processing_tasks_queue_for_current_time_window[0][1] == self.scheduling_instance.jobs[
+                        machine.processing_tasks_queue_for_current_time_window[0][0]
+                    ].current_processing_operation:
+                        machine_action_mask[machine.processing_tasks_queue_for_current_time_window[0][0]] = 1
+                    else:
+                        machine_action_mask[self.num_jobs + 4] = 1
+                else:
+                    machine_action_mask[self.num_jobs + 4] = 1
+            else:
+                machine_action_mask[self.num_jobs + 4] = 1
+
+        # if machine.reliability >= 0.8:
+        #     machine_action_mask[self.num_jobs:self.num_jobs+4] = 0
 
         job_features = -1 * np.ones((self.num_jobs, 5), dtype=np.float32)
         for job_id in range(self.num_jobs):
@@ -254,9 +267,6 @@ class InitialScheduleEnv(MultiAgentEnv):
                                 job_location_index, machine_index  # machine_location_index == machine_index
                             ]
 
-                            if (machine.machine_status in (0, 1, 2)) and machine.current_processing_task is None:
-                                machine_action_mask[job_id] = 1
-
         machine_features = np.array([
             # [0] machine status
             machine.machine_status,
@@ -283,19 +293,38 @@ class InitialScheduleEnv(MultiAgentEnv):
         transbot_action_mask = np.zeros((self.num_transbot_actions,), dtype=np.int32)
         # idling (0): can choose a job, or go to charge, or do nothing
         if transbot.agv_status == 0:
-            transbot_action_mask[self.num_jobs:] = 1
-        # unload transporting (1): can change its task or insist the current task
+            if transbot.is_for_charging:
+                transbot_action_mask[self.num_jobs + 1] = 1
+            else:
+                if len(transbot.transport_tasks_queue_for_current_time_window) > 0:
+                    if transbot.transport_tasks_queue_for_current_time_window[0][1] == self.scheduling_instance.jobs[
+                        transbot.transport_tasks_queue_for_current_time_window[0][0]
+                    ].current_processing_operation:
+                        if self.scheduling_instance.jobs[
+                            transbot.transport_tasks_queue_for_current_time_window[0][0]
+                        ].assigned_machine is None:
+                            transbot_action_mask[self.num_jobs + 1] = 1
+                        else:
+                            if self.scheduling_instance.jobs[
+                                transbot.transport_tasks_queue_for_current_time_window[0][0]
+                            ].assigned_transbot is None:
+                                transbot_action_mask[transbot.transport_tasks_queue_for_current_time_window[0][0]] = 1
+                            else:
+                                transbot_action_mask[self.num_jobs + 1] = 1
+                    else:
+                        transbot_action_mask[self.num_jobs + 1] = 1
+                else:
+                    transbot_action_mask[self.num_jobs + 1] = 1
+        # unload transporting (1): can only do nothing
         elif transbot.agv_status == 1:
-            transbot_action_mask[self.num_jobs:] = 1
+            transbot_action_mask[self.num_jobs + 1] = 1
         # loaded transporting (2) or charging (3): can only do nothing
         elif transbot.agv_status == 2 or transbot.agv_status == 3:
             transbot_action_mask[self.num_jobs + 1] = 1
         # low battery (4): can only go to charge
         elif transbot.agv_status == 4:
             transbot_action_mask[self.num_jobs] = 1
-
-        if transbot.battery.soc >= 0.8:
-            transbot_action_mask[self.num_jobs] = 0
+            print(f"{transbot_agent_id} observes low battery status")
 
         job_features = -1 * np.ones((self.num_jobs, 5), dtype=np.float32)
         for job_id in range(self.num_jobs):
@@ -329,9 +358,6 @@ class InitialScheduleEnv(MultiAgentEnv):
                                     # [4] transport time for this transbot to handle this operation
                                     job_features[job_id, 4] = transbot_to_job + job_to_machine
 
-                                    if (transbot.agv_status == 0 or transbot.agv_status == 1) and not transbot.is_for_charging:
-                                        transbot_action_mask[job_id] = 1
-
         transbot_features = np.array([
             # [0] transbot status
             transbot.agv_status,
@@ -340,6 +366,10 @@ class InitialScheduleEnv(MultiAgentEnv):
             # [2] time to finish the current task
             transbot.estimated_remaining_time_to_finish,
         ], dtype=np.float32)
+
+        # if transbot_features[0] == 4:
+        # # if transbot.agv_status == 4:
+        #     print(f"{transbot_agent_id} observes low battery status")
 
         return {
             "action_mask": transbot_action_mask,
@@ -363,7 +393,7 @@ class InitialScheduleEnv(MultiAgentEnv):
         self.max_operations = max(job.operations_matrix.shape[0] for job in self.scheduling_instance.jobs)
         self.MAX_MAINTENANCE_COUNTS = sum(job.num_total_processing_operations for job in self.scheduling_instance.jobs)
         self.initial_estimated_makespan = self.local_schedule.local_makespan
-        self.time_upper_bound = self.initial_estimated_makespan * 5
+        self.time_upper_bound = self.initial_estimated_makespan * 100
         self.current_time_before_step = self.local_schedule.time_window_start
         self.current_time_after_step = self.local_schedule.time_window_start
         self.reward_this_step = 0.0
@@ -550,6 +580,7 @@ class InitialScheduleEnv(MultiAgentEnv):
                         this_job.assigned_transbot = None
 
                     current_transbot.current_task = -1
+                    print(f"transbot {current_transbot.agv_id} choose to go charging.")
 
                 # do-nothing
                 elif action == self.num_jobs + 1:
@@ -703,6 +734,8 @@ class InitialScheduleEnv(MultiAgentEnv):
                     current_machine.start_processing(start_time=self.current_time_before_step,
                                                      estimated_processing_duration=estimated_processing_duration,
                                                      actual_processing_duration=actual_processing_duration)
+                    current_machine.processing_tasks_queue_for_current_time_window.pop(0)
+
                     # logging.info(
                     #     f"Machine {machine_index} starts processing Job {current_job.job_id} at time {self.current_time_before_step}.")
                     current_machine.update_degradation_process()
@@ -804,6 +837,7 @@ class InitialScheduleEnv(MultiAgentEnv):
                             self.local_result.jobs[current_job.job_id].operations[
                                 current_job.current_processing_operation
                             ].assigned_transbot = current_transbot.agv_id
+                            current_transbot.transport_tasks_queue_for_current_time_window.pop(0)
                             current_job.start_transporting(start_time=self.current_time_before_step,
                                                            estimated_duration=len(loaded_path) - 1)
 
@@ -811,6 +845,8 @@ class InitialScheduleEnv(MultiAgentEnv):
 
                         else:
                             current_transbot.idling_process()
+                            # if current_transbot.agv_status == 4:
+                            #     print(f"transbot {current_transbot.agv_id} enters low battery status!")
                     else:
                         if current_job.estimated_remaining_time_for_current_task <= transbot_to_job:
                             # the transbot can start to go to the job
@@ -830,8 +866,12 @@ class InitialScheduleEnv(MultiAgentEnv):
 
                         else:
                             current_transbot.idling_process()
+                            # if current_transbot.agv_status == 4:
+                            #     print(f"transbot {current_transbot.agv_id} enters low battery status!")
             else:
                 current_transbot.idling_process()
+                if current_transbot.agv_status == 4:
+                    print(f"transbot {current_transbot.agv_id} enters low battery status after idling process!")
 
         # 1 (Unload Transporting): moving for 1 time step
         elif current_transbot.agv_status == 1:
@@ -1051,6 +1091,7 @@ class InitialScheduleEnv(MultiAgentEnv):
                             self.local_result.jobs[current_job.job_id].operations[
                                 current_job.current_processing_operation
                             ].assigned_transbot = current_transbot.agv_id
+                            current_transbot.transport_tasks_queue_for_current_time_window.pop(0)
                             current_job.start_transporting(start_time=self.current_time_after_step,
                                                            estimated_duration=len(loaded_path) - 1)
                     elif current_transbot.current_task == -1:
@@ -1098,6 +1139,8 @@ class InitialScheduleEnv(MultiAgentEnv):
                     ].actual_finish_transporting_time = self.current_time_after_step
                     current_transbot.finish_loaded_transporting(finish_time=self.current_time_after_step)
                     self.rewards[f'transbot{current_transbot.agv_id}'] += 0.1
+                    if current_transbot.agv_status == 4:
+                        print(f"transbot {current_transbot.agv_id} enters low battery status after loaded transporting!")
                 else:
                     # Mark the new position of the transbot as an obstacle
                     self.factory_instance.factory_graph.set_obstacle(location=current_transbot.current_location)
@@ -1190,15 +1233,17 @@ class InitialScheduleEnv(MultiAgentEnv):
 
         # Check whether the job has assigned to a machine
         if current_job.assigned_machine is None:
+            # machine_id = self.local_schedule.jobs[current_job.job_id].operations[current_job.current_processing_operation].assigned_machine
             raise Exception(f"Job {transporting_action} hasn't assigned to a machine, so the target is None!")
-
+        else:
+            machine_id = current_job.assigned_machine
         # Check whether the job needs transportation
         if current_job.job_status == 2:  # if the job is in transporting, this transbot don't consider it
             raise Exception(f"Job {transporting_action} is in transporting!")
         job_location_index = self.factory_instance.factory_graph.location_index_map[
             current_job.current_location]
         job_to_machine = self.factory_instance.factory_graph.unload_transport_time_matrix[
-            job_location_index, current_job.assigned_machine  # machine_location_index == machine_index
+            job_location_index, machine_id  # machine_location_index == machine_index
         ]
         if job_to_machine == 0:  # the job is at its destination and doesn't need to be transported
             raise Exception(f"Job {transporting_action} doesn't need to be transported!")
