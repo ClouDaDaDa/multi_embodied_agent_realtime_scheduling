@@ -49,7 +49,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
     """
     A Multi-agent Environment for Integrated Production, Transportation and Maintenance Real-time Scheduling.
     """
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 20}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 10}
 
     def __init__(self,
                  config,
@@ -365,8 +365,8 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.MAX_MAINTENANCE_COUNTS = sum(job.num_total_processing_operations for job in self.scheduling_instance.jobs)
         self.initial_estimated_makespan = self.local_schedule.local_makespan
         # self.time_upper_bound = self.initial_estimated_makespan * 5
-        self.estimated_makespan = 820
-        self.time_upper_bound = 5 * self.initial_estimated_makespan
+        # self.estimated_makespan = 820
+        self.time_upper_bound = 3 * self.initial_estimated_makespan
         self.current_time_before_step = self.local_schedule.time_window_start
         self.current_time_after_step = self.local_schedule.time_window_start
         self.reward_this_step = 0.0
@@ -929,7 +929,34 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         elif current_transbot.agv_status == 4:
             if current_transbot.current_task != -1:
                 # todo: when to check the low battery status?
-                raise ValueError(f"The transbot {current_transbot.agv_id} should go to charge!")
+                # raise ValueError(f"The transbot {current_transbot.agv_id} should go to charge!")
+                print(f"The transbot {current_transbot.agv_id} should go to charge!")
+
+                # If transbot changes its decision, release the binding relationship with the previous job
+                if current_transbot.current_task is not None:
+                    this_job = self.scheduling_instance.jobs[current_transbot.current_task]
+                    this_job.assigned_transbot = None
+                current_transbot.current_task = -1
+                charging_station_location = self.factory_instance.factory_graph.pickup_dropoff_points[
+                    self.factory_instance.factory_graph.nearest_charging_station(
+                        current_transbot.current_location
+                    )
+                ]
+                unload_path = a_star_search(
+                    graph=self.factory_instance.factory_graph,
+                    start=current_transbot.current_location,
+                    goal=charging_station_location
+                )
+                # print(
+                #     f"from {current_transbot.current_location} to {charging_station_location}, unload_path = {unload_path}")
+                current_transbot.start_unload_transporting(
+                    target_location=charging_station_location,
+                    unload_path=unload_path,
+                    start_time=self.current_time_before_step
+                )
+
+                self._handle_transbot_unload_move(current_transbot=current_transbot)
+
             else:
                 charging_station_location = self.factory_instance.factory_graph.pickup_dropoff_points[
                     self.factory_instance.factory_graph.nearest_charging_station(
@@ -1714,7 +1741,7 @@ if __name__ == "__main__":
 
     func("Env instance created.")
 
-    num_episodes = 1
+    num_episodes = 100
 
     for episode in range(num_episodes):
         print(f"\nStarting episode {episode + 1}")

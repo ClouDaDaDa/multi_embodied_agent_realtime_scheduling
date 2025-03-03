@@ -241,5 +241,9 @@ if __name__ == "__main__":
     with open(local_schedule_file,
               "rb") as file:
         local_schedule = pickle.load(file)
-    plot_local_gantt_by_resource(local_schedule, save_fig_dir=local_schedule_file_dir)
-    plot_local_gantt(local_schedule, save_fig_dir=local_schedule_file_dir)
+    plot_local_gantt_by_resource(local_schedule,
+                                 save_fig_dir=local_schedule_file_dir
+                                 )
+    plot_local_gantt(local_schedule,
+                     save_fig_dir=local_schedule_file_dir
+                     )

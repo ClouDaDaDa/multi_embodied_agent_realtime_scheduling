@@ -52,12 +52,12 @@ if __name__ == "__main__":
         # "render_mode": "human",
     }
 
-    # scheduling_env = LocalSchedulingMultiAgentEnv(config)
-    scheduling_env = InitialScheduleEnv(config)
+    scheduling_env = LocalSchedulingMultiAgentEnv(config)
+    # scheduling_env = InitialScheduleEnv(config)
 
     func("Env instance created.")
 
-    num_episodes = 100
+    num_episodes = 1000
 
     makespans = []
 
