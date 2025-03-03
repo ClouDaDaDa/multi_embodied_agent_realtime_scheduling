@@ -168,8 +168,8 @@ def plot_local_result_gantt_by_resource(local_result, save_fig_dir=None):
             processing_duration = end_processing_time - start_processing_time
 
             # Plot a rectangle for the operation
-            ax.barh(idx, processing_duration, left=start_processing_time, color=color, edgecolor="white",
-                    align="center")
+            ax.barh(idx, processing_duration, left=start_processing_time, color=color,
+                    edgecolor="white", align="center")
             # ax.barh(idx, duration, left=start_time, color=color, edgecolor=color, align="center")
 
             if operation.assigned_transbot is not None:

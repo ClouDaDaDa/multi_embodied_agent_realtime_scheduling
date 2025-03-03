@@ -420,42 +420,42 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                 ))
                 this_job.processing_operations_for_current_time_window.append(int(operation_id))
 
-                scheduled_processing_op = (job_id, operation_id,
-                                           local_schedule_job.operations[operation_id].scheduled_start_processing_time)
-                op_index = bisect.bisect_left([op[2] for op in self.factory_instance.machines[
-                    local_schedule_job_operation.assigned_machine
-                ].processing_tasks_queue_for_current_time_window],
-                                              local_schedule_job.operations[
-                                                  operation_id].scheduled_start_processing_time)
-                self.factory_instance.machines[
-                    local_schedule_job_operation.assigned_machine
-                ].processing_tasks_queue_for_current_time_window.insert(op_index, scheduled_processing_op)
-
-                if local_schedule_job_operation.assigned_transbot is not None:
-                    scheduled_transporting_op = (job_id, operation_id,
-                                                 local_schedule_job.operations[
-                                                     operation_id].scheduled_start_transporting_time)
-                    if operation_id == 0:
-                        op_index = bisect.bisect_left([op[2] for op in self.factory_instance.agv[
-                            local_schedule_job_operation.assigned_transbot
-                        ].transport_tasks_queue_for_current_time_window],
-                                                      local_schedule_job.operations[
-                                                          operation_id].scheduled_start_transporting_time)
-                        self.factory_instance.agv[
-                            local_schedule_job_operation.assigned_transbot
-                        ].transport_tasks_queue_for_current_time_window.insert(op_index, scheduled_transporting_op)
-
-                    else:
-                        if local_schedule_job.operations[operation_id].assigned_machine != \
-                                local_schedule_job.operations[operation_id - 1].assigned_machine:
-                            op_index = bisect.bisect_left([op[2] for op in self.factory_instance.agv[
-                                local_schedule_job_operation.assigned_transbot
-                            ].transport_tasks_queue_for_current_time_window],
-                                                          local_schedule_job.operations[
-                                                              operation_id].scheduled_start_transporting_time)
-                            self.factory_instance.agv[
-                                local_schedule_job_operation.assigned_transbot
-                            ].transport_tasks_queue_for_current_time_window.insert(op_index, scheduled_transporting_op)
+                # scheduled_processing_op = (job_id, operation_id,
+                #                            local_schedule_job.operations[operation_id].scheduled_start_processing_time)
+                # op_index = bisect.bisect_left([op[2] for op in self.factory_instance.machines[
+                #     local_schedule_job_operation.assigned_machine
+                # ].processing_tasks_queue_for_current_time_window],
+                #                               local_schedule_job.operations[
+                #                                   operation_id].scheduled_start_processing_time)
+                # self.factory_instance.machines[
+                #     local_schedule_job_operation.assigned_machine
+                # ].processing_tasks_queue_for_current_time_window.insert(op_index, scheduled_processing_op)
+                #
+                # if local_schedule_job_operation.assigned_transbot is not None:
+                #     scheduled_transporting_op = (job_id, operation_id,
+                #                                  local_schedule_job.operations[
+                #                                      operation_id].scheduled_start_transporting_time)
+                #     if operation_id == 0:
+                #         op_index = bisect.bisect_left([op[2] for op in self.factory_instance.agv[
+                #             local_schedule_job_operation.assigned_transbot
+                #         ].transport_tasks_queue_for_current_time_window],
+                #                                       local_schedule_job.operations[
+                #                                           operation_id].scheduled_start_transporting_time)
+                #         self.factory_instance.agv[
+                #             local_schedule_job_operation.assigned_transbot
+                #         ].transport_tasks_queue_for_current_time_window.insert(op_index, scheduled_transporting_op)
+                #
+                #     else:
+                #         if local_schedule_job.operations[operation_id].assigned_machine != \
+                #                 local_schedule_job.operations[operation_id - 1].assigned_machine:
+                #             op_index = bisect.bisect_left([op[2] for op in self.factory_instance.agv[
+                #                 local_schedule_job_operation.assigned_transbot
+                #             ].transport_tasks_queue_for_current_time_window],
+                #                                           local_schedule_job.operations[
+                #                                               operation_id].scheduled_start_transporting_time)
+                #             self.factory_instance.agv[
+                #                 local_schedule_job_operation.assigned_transbot
+                #             ].transport_tasks_queue_for_current_time_window.insert(op_index, scheduled_transporting_op)
 
             if len(this_job.processing_operations_for_current_time_window) > 0:
                 this_job.current_processing_operation = this_job.processing_operations_for_current_time_window[0]
