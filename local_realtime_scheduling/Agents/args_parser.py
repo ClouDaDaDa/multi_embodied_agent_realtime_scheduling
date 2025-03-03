@@ -158,7 +158,7 @@ def add_default_args(
     parser.add_argument(
         "--checkpoint-freq",
         type=int,
-        default=0,
+        default=10,
         help=(
             "The frequency (in training iterations) with which to create checkpoints. "
             "Note that if --wandb-key is provided, all checkpoints will "

@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     func("Env instance created.")
 
-    num_episodes = 100
+    num_episodes = 1000
 
     makespans = []
 

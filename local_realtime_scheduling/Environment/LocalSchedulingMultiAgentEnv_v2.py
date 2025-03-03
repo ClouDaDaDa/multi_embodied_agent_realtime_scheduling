@@ -49,7 +49,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
     """
     A Multi-agent Environment for Integrated Production, Transportation and Maintenance Real-time Scheduling.
     """
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 20}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 10}
 
     def __init__(self,
                  config,
@@ -365,7 +365,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         self.MAX_MAINTENANCE_COUNTS = sum(job.num_total_processing_operations for job in self.scheduling_instance.jobs)
         self.initial_estimated_makespan = self.local_schedule.local_makespan
         # self.time_upper_bound = self.initial_estimated_makespan * 5
-        self.estimated_makespan = 820
+        # self.estimated_makespan = 820
         self.time_upper_bound = 3 * self.initial_estimated_makespan
         self.current_time_before_step = self.local_schedule.time_window_start
         self.current_time_after_step = self.local_schedule.time_window_start

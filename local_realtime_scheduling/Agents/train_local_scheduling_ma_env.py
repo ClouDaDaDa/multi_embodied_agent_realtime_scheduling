@@ -46,7 +46,7 @@ if __name__ == "__main__":
     example_env = LocalSchedulingMultiAgentEnv(env_config)
     example_env.reset()
 
-    train_batch_size = 2 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
+    train_batch_size = 20 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
 
     base_config = (
         PPOConfig()
@@ -59,19 +59,32 @@ if __name__ == "__main__":
             num_envs_per_env_runner=1,
             batch_mode="complete_episodes",
             rollout_fragment_length="auto",
-            sample_timeout_s=500,
+            sample_timeout_s=600,
+            observation_filter="MeanStdFilter",
         )
         .training(
             train_batch_size_per_learner=train_batch_size,
             minibatch_size=(example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound),
-            entropy_coeff=0.01,
-            num_epochs=5,
-            lr=1e-5,
+            entropy_coeff=[
+                [0, 0.05],
+                [train_batch_size * 20, 0.01],
+                [train_batch_size * 100, 0],
+            ],
+            num_epochs=10,
+            # lr=1e-5,
+            lr=[
+                [0, 1e-4],
+                [train_batch_size * 10, 5e-5],
+                [train_batch_size * 50, 1e-5],
+            ],
         )
         .learners(
-            num_learners=10,
+            num_learners=1,
             num_cpus_per_learner=1,
             num_gpus_per_learner=0,
+        )
+        .checkpointing(
+            checkpoint_trainable_policies_only=True,
         )
         .rl_module(
             # We need to explicitly specify here RLModule to use and
@@ -85,15 +98,25 @@ if __name__ == "__main__":
             # ),
             rl_module_spec=MultiRLModuleSpec(
                 rl_module_specs={
-                    f"p_{agent_i}": RLModuleSpec(
+                    # f"p_{agent_i}": RLModuleSpec(
+                    #     module_class=ActionMaskingTorchRLModule,
+                    #     # model_config={
+                    #     #     # "head_fcnet_hiddens": [64, 64],
+                    #     #     # "head_fcnet_activation": "relu",
+                    #     # },
+                    #     observation_space=example_env.observation_spaces[agent_i],
+                    #     action_space=example_env.action_spaces[agent_i],
+                    # ) for agent_i in example_env.agents
+                    "p_machine": RLModuleSpec(
                         module_class=ActionMaskingTorchRLModule,
-                        # model_config={
-                        #     # "head_fcnet_hiddens": [64, 64],
-                        #     # "head_fcnet_activation": "relu",
-                        # },
-                        observation_space=example_env.observation_spaces[agent_i],
-                        action_space=example_env.action_spaces[agent_i],
-                    ) for agent_i in example_env.agents
+                        observation_space=example_env.observation_spaces[example_env.machine_agents[0]],
+                        action_space=example_env.action_spaces[example_env.machine_agents[0]],
+                    ),
+                    "p_transbot": RLModuleSpec(
+                        module_class=ActionMaskingTorchRLModule,
+                        observation_space=example_env.observation_spaces[example_env.transbot_agents[0]],
+                        action_space=example_env.action_spaces[example_env.transbot_agents[0]],
+                    ),
                 },
             ),
         )
@@ -103,8 +126,10 @@ if __name__ == "__main__":
             # `policy_mapping_fn` and the env provided spaces for the different
             # agents. Alternatively, you could use:
             # policies: {main0: PolicySpec(...), main1: PolicySpec}
-            policies={f"p_{agent_i}" for agent_i in example_env.agents},
-            policy_mapping_fn=lambda aid, *a, **kw: f"p_{aid}",
+            # policies={f"p_{agent_i}" for agent_i in example_env.agents},
+            # policy_mapping_fn=lambda aid, *a, **kw: f"p_{aid}",
+            policies={"p_machine", "p_transbot"},
+            policy_mapping_fn=lambda agent_id, *a, **kw: "p_machine" if agent_id.startswith("machine") else "p_transbot",
         )
         # .evaluation(
         #     evaluation_num_env_runners=1,
