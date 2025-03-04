@@ -226,8 +226,14 @@ if __name__ == "__main__":
                             f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
                             + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}_init_schedule"
 
-    result_file_name = local_result_file_dir + ".pkl"
+    drl_local_result_file_dir = current_dir + \
+                                          "/local_result_" + \
+                                          f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
+                                          + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}_DRL"
+
+    # result_file_name = local_result_file_dir + ".pkl"
     # result_file_name = init_schedule_local_result_file_dir + ".pkl"
+    result_file_name = drl_local_result_file_dir + ".pkl"
 
     with open(result_file_name,
               "rb") as file:
@@ -238,6 +244,7 @@ if __name__ == "__main__":
     #                                     )
     plot_local_result_gantt(local_result,
                             # save_fig_dir=init_schedule_local_result_file_dir
-                            save_fig_dir=local_result_file_dir
+                            # save_fig_dir=local_result_file_dir
+                            save_fig_dir=drl_local_result_file_dir
                             )
 

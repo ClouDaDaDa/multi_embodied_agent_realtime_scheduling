@@ -1,16 +1,12 @@
 # from memory_profiler import profile
 # @profile
-import numpy as np
-
-from configs import dfjspt_params
-
-
 def func(content: str):
     print(content)
 
 import os
 import pickle
-# import numpy as np
+import numpy as np
+from configs import dfjspt_params
 from local_realtime_scheduling.Environment.LocalSchedulingMultiAgentEnv_v2 import LocalSchedulingMultiAgentEnv
 from local_realtime_scheduling.BaselineMethods.DispatchingRules.machine_agent_heuristics import machine_agent_heuristics
 from local_realtime_scheduling.BaselineMethods.DispatchingRules.transbot_agent_heuristics import transbot_agent_heuristics
@@ -29,12 +25,7 @@ if __name__ == "__main__":
     result_file_name = os.path.dirname(os.path.dirname(current_dir)) + \
                        "/local_results/local_result_" + \
                        f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
-                       + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}.pkl"
-
-    init_schedule_result_file_name = os.path.dirname(os.path.dirname(current_dir)) + \
-                       "/local_results/local_result_" + \
-                       f"J{dfjspt_params.n_jobs}M{dfjspt_params.n_machines}T{dfjspt_params.n_transbots}" \
-                       + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}_init_schedule.pkl"
+                       + f"I0_window{dfjspt_params.time_window_size}/window_{dfjspt_params.current_window}_DRL.pkl"
 
     with open(local_schedule_file,
               "rb") as file:
@@ -46,18 +37,16 @@ if __name__ == "__main__":
         "n_machines": dfjspt_params.n_machines,
         "n_jobs": dfjspt_params.n_jobs,
         "n_transbots": dfjspt_params.n_transbots,
-        "local_schedule": local_schedule,
+        # "local_schedule": local_schedule,
         # "local_result_file": result_file_name,
-        # "local_result_file": init_schedule_result_file_name,
-        # "render_mode": "human",
+        "render_mode": "human",
     }
 
     scheduling_env = LocalSchedulingMultiAgentEnv(config)
-    # scheduling_env = InitialScheduleEnv(config)
 
     func("Env instance created.")
 
-    num_episodes = 1000
+    num_episodes = 1
 
     makespans = []
 
@@ -65,7 +54,7 @@ if __name__ == "__main__":
         print(f"\nStarting episode {episode + 1}")
         decision_count = 0
         observations, infos = scheduling_env.reset()
-        # scheduling_env.render()
+        scheduling_env.render()
         # print(f"decision_count = {decision_count}")
         decision_count += 1
         done = {'__all__': False}
@@ -86,7 +75,7 @@ if __name__ == "__main__":
                     actions[agent_id] = transbot_agent_heuristics(transbot_obs=obs)
 
             observations, rewards, done, truncated, info = scheduling_env.step(actions)
-            # scheduling_env.render()
+            scheduling_env.render()
             # print(f"decision_count = {decision_count}")
             decision_count += 1
 
@@ -96,7 +85,7 @@ if __name__ == "__main__":
             # print(f"Actions: {actions}")
             # print(f"Rewards: {rewards}")
             # print(f"Done: {done}")
-        # scheduling_env.close()
+        scheduling_env.close()
         # for job_id in range(scheduling_env.num_jobs):
         #     print(f"job {job_id}: {scheduling_env.scheduling_instance.jobs[job_id].scheduled_results}")
         #

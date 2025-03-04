@@ -24,3 +24,9 @@ class MyCallbacks(DefaultCallbacks):
         # metrics_logger.stats["total_makespan"] = env.current_time_after_step
         # episode.custom_metrics["total_cost"] = episode.worker.env.total_cost
         print(env.current_time_after_step)
+        metrics_logger.log_value(key="actual_makespan", value=env.current_time_after_step,
+                                 reduce="mean")
+
+
+
+

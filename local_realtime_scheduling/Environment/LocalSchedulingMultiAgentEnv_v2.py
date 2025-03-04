@@ -1237,7 +1237,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
         current_transbot = self.factory_instance.agv[transbot_index]
         # Check what status is the transbot currently in, must be 0 (idling) or 1 (unload trans) to continue
         if current_transbot.agv_status != 0 and current_transbot.agv_status != 1:
-            raise Exception(f"...!")
+            raise Exception(f"current_transbot is not idling nor unload transporting, thus cannot make other decisions!")
 
         # Check whether the job is in the current problem
         if transporting_action not in self.local_schedule.jobs:  # the job is in this problem
