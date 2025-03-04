@@ -3,6 +3,9 @@ from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 from ray.rllib.core.rl_module.multi_rl_module import MultiRLModuleSpec
 import os
 import pickle
+
+from ray.tune.examples.pb2_ppo_example import explore
+
 from local_realtime_scheduling.Environment.LocalSchedulingMultiAgentEnv_v2 import LocalSchedulingMultiAgentEnv
 from local_realtime_scheduling.Agents.args_parser import add_default_args
 from local_realtime_scheduling.Agents.action_mask_module import ActionMaskingTorchRLModule
@@ -12,7 +15,7 @@ from local_realtime_scheduling.InterfaceWithGlobal.divide_global_schedule_to_loc
 
 
 parser = add_default_args(
-    default_iters=500,
+    default_iters=1000,
     default_reward=1000,
 )
 
@@ -46,7 +49,7 @@ if __name__ == "__main__":
     example_env = LocalSchedulingMultiAgentEnv(env_config)
     example_env.reset()
 
-    train_batch_size = 20 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
+    train_batch_size = 100 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
 
     base_config = (
         PPOConfig()
@@ -55,7 +58,7 @@ if __name__ == "__main__":
             env_config=env_config,
         )
         .env_runners(
-            num_env_runners=40,
+            num_env_runners=50,
             num_envs_per_env_runner=1,
             batch_mode="complete_episodes",
             rollout_fragment_length="auto",
@@ -66,16 +69,16 @@ if __name__ == "__main__":
             train_batch_size_per_learner=train_batch_size,
             minibatch_size=(example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound),
             entropy_coeff=[
-                [0, 0.05],
-                [train_batch_size * 20, 0.01],
-                [train_batch_size * 100, 0],
+                [0, 0.005],
+                [train_batch_size * 10, 0.001],
+                [train_batch_size * 50, 0],
             ],
             num_epochs=10,
             # lr=1e-5,
             lr=[
                 [0, 1e-4],
-                [train_batch_size * 10, 5e-5],
-                [train_batch_size * 50, 1e-5],
+                [train_batch_size * 5, 5e-5],
+                [train_batch_size * 20, 1e-5],
             ],
         )
         .learners(
@@ -111,11 +114,21 @@ if __name__ == "__main__":
                         module_class=ActionMaskingTorchRLModule,
                         observation_space=example_env.observation_spaces[example_env.machine_agents[0]],
                         action_space=example_env.action_spaces[example_env.machine_agents[0]],
+                        # model_config={
+                        #     "vf_share_layers": False,
+                        #     "use_lstm": True,
+                        #     "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 10,
+                        # },
                     ),
                     "p_transbot": RLModuleSpec(
                         module_class=ActionMaskingTorchRLModule,
                         observation_space=example_env.observation_spaces[example_env.transbot_agents[0]],
                         action_space=example_env.action_spaces[example_env.transbot_agents[0]],
+                        # model_config={
+                        #     "vf_share_layers": False,
+                        #     "use_lstm": True,
+                        #     "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 10,
+                        # },
                     ),
                 },
             ),
@@ -131,12 +144,13 @@ if __name__ == "__main__":
             policies={"p_machine", "p_transbot"},
             policy_mapping_fn=lambda agent_id, *a, **kw: "p_machine" if agent_id.startswith("machine") else "p_transbot",
         )
-        # .evaluation(
-        #     evaluation_num_env_runners=1,
-        #     evaluation_interval=1,
-        #     # Run evaluation parallel to training to speed up the example.
-        #     evaluation_parallel_to_training=False,
-        # )
+        .evaluation(
+            evaluation_num_env_runners=1,
+            evaluation_interval=10,
+            # Run evaluation parallel to training to speed up the example.
+            evaluation_parallel_to_training=False,
+            # evaluation_config=PPOConfig.overrides(explore=False),
+        )
         .callbacks(MyCallbacks)
     )
 
