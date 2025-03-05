@@ -49,7 +49,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
     """
     A Multi-agent Environment for Integrated Production, Transportation and Maintenance Real-time Scheduling.
     """
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 10}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 20}
 
     def __init__(self,
                  config,

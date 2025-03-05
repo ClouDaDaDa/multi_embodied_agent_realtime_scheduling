@@ -14,7 +14,7 @@ stop_iters = 5000
 stop_timesteps = 100000000000
 stop_reward = 2
 
-max_n_machines = 5
+max_n_machines = 6
 min_prcs_time = 1
 max_prcs_time = 99
 n_machines_is_fixed = True
@@ -25,7 +25,7 @@ min_compatible_machines = 1
 time_for_compatible_machines_are_same = False
 time_viration_range = 5
 
-max_n_transbots = 2
+max_n_transbots = 3
 min_tspt_time = 2
 max_tspt_time = 4
 loaded_transport_time_scale = 1.5

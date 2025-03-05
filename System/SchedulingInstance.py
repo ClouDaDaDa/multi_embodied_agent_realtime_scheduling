@@ -45,7 +45,7 @@ class SchedulingInstance:
             n_compatible_machines_for_operations = n_machines * np.ones(shape=(n_jobs, max(self.n_operations_for_jobs)),
                                                                         dtype=int)
         else:
-            n_compatible_machines_for_operations = np.random.randint(1, n_machines + 1,
+            n_compatible_machines_for_operations = np.random.randint(2, n_machines + 1,
                                                                      size=(n_jobs, max(self.n_operations_for_jobs)))
 
         for job_id in range(n_jobs):

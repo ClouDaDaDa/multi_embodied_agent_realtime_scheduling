@@ -3,9 +3,6 @@ from ray.rllib.core.rl_module.rl_module import RLModuleSpec
 from ray.rllib.core.rl_module.multi_rl_module import MultiRLModuleSpec
 import os
 import pickle
-
-from ray.tune.examples.pb2_ppo_example import explore
-
 from local_realtime_scheduling.Environment.LocalSchedulingMultiAgentEnv_v2 import LocalSchedulingMultiAgentEnv
 from local_realtime_scheduling.Agents.args_parser import add_default_args
 from local_realtime_scheduling.Agents.action_mask_module import ActionMaskingTorchRLModule
@@ -15,7 +12,7 @@ from local_realtime_scheduling.InterfaceWithGlobal.divide_global_schedule_to_loc
 
 
 parser = add_default_args(
-    default_iters=1000,
+    default_iters=500,
     default_reward=1000,
 )
 
@@ -49,7 +46,7 @@ if __name__ == "__main__":
     example_env = LocalSchedulingMultiAgentEnv(env_config)
     example_env.reset()
 
-    train_batch_size = 100 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
+    train_batch_size = 2 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
 
     base_config = (
         PPOConfig()
@@ -58,7 +55,7 @@ if __name__ == "__main__":
             env_config=env_config,
         )
         .env_runners(
-            num_env_runners=50,
+            num_env_runners=0,
             num_envs_per_env_runner=1,
             batch_mode="complete_episodes",
             rollout_fragment_length="auto",
@@ -82,7 +79,7 @@ if __name__ == "__main__":
             ],
         )
         .learners(
-            num_learners=1,
+            num_learners=0,
             num_cpus_per_learner=1,
             num_gpus_per_learner=0,
         )
@@ -114,21 +111,21 @@ if __name__ == "__main__":
                         module_class=ActionMaskingTorchRLModule,
                         observation_space=example_env.observation_spaces[example_env.machine_agents[0]],
                         action_space=example_env.action_spaces[example_env.machine_agents[0]],
-                        # model_config={
-                        #     "vf_share_layers": False,
-                        #     "use_lstm": True,
-                        #     "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 10,
-                        # },
+                        model_config={
+                            "vf_share_layers": False,
+                            "use_lstm": True,
+                            "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 5,
+                        },
                     ),
                     "p_transbot": RLModuleSpec(
                         module_class=ActionMaskingTorchRLModule,
                         observation_space=example_env.observation_spaces[example_env.transbot_agents[0]],
                         action_space=example_env.action_spaces[example_env.transbot_agents[0]],
-                        # model_config={
-                        #     "vf_share_layers": False,
-                        #     "use_lstm": True,
-                        #     "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 10,
-                        # },
+                        model_config={
+                            "vf_share_layers": False,
+                            "use_lstm": True,
+                            "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 5,
+                        },
                     ),
                 },
             ),
@@ -159,7 +156,7 @@ if __name__ == "__main__":
     # base_config["num_env_runners"] = 0
     # base_config["inference_only"] = False
 
-    args.no_tune = False
+    args.no_tune = True
 
     print(vars(base_config))
     print(vars(args))

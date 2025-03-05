@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "n_machines": dfjspt_params.n_machines,
         "n_jobs": dfjspt_params.n_jobs,
         "n_transbots": dfjspt_params.n_transbots,
-        # "local_schedule": local_schedule,
+        "local_schedule": local_schedule,
         # "local_result_file": result_file_name,
         "render_mode": "human",
     }

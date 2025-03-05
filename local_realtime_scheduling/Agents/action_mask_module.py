@@ -189,13 +189,13 @@ class ActionMaskingTorchRLModule(ActionMaskingRLModule, PPOTorchRLModule):
             for key, value in observation.items():
                 # If value is a tensor, flatten it
                 if isinstance(value, torch.Tensor):
-                    flattened_obs_parts.append(value.flatten(start_dim=1))
+                    flattened_obs_parts.append(value.flatten(start_dim=2))
                 else:
                     # Handle other cases, such as if value is a different type
                     raise ValueError(f"Unexpected value type in observation: {type(value)} for key {key}")
 
             # Concatenate all flattened components into a single tensor
-            flattened_obs = torch.cat(flattened_obs_parts, dim=1)
+            flattened_obs = torch.cat(flattened_obs_parts, dim=-1)
 
             # Put the concatenated tensor back into the batch
             batch[Columns.OBS] = flattened_obs

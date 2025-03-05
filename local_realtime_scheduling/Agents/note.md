@@ -1,7 +1,8 @@
 
+## Changes to source code:
 
-
-Add the following code into `python3.10/site-packages/ray/rllib/core/models/catalog.py`:
+### 1. 
+Add the following code into `/python3.10/site-packages/ray/rllib/core/models/catalog.py`:
 
 1) Before Class `catalog`:
 
@@ -59,5 +60,62 @@ class NestedModelConfig(ModelConfig):
     #     f" lstm={use_lstm} found."
     # )
 ```
+
+
+### 2.
+
+Change method `tokenize` in `/python3.10/site-packages/ray/rllib/core/models/base.py`:
+
+```
+@DeveloperAPI
+def tokenize(tokenizer: Encoder, inputs: dict, framework: str) -> dict:
+    """Tokenizes the observations from the input dict.
+
+    Args:
+        tokenizer: The tokenizer to use.
+        inputs: The input dict.
+
+    Returns:
+        The output dict.
+    """
+    # Tokenizer may depend solely on observations.
+    obs = inputs[Columns.OBS]
+    tokenizer_inputs = {Columns.OBS: obs}
+    size = list(obs.size() if framework == "torch" else obs.shape)
+    b_dim, t_dim = size[:2]
+    fold, unfold = get_fold_unfold_fns(b_dim, t_dim, framework=framework)
+    # Push through the tokenizer encoder.
+    fold_input = fold(tokenizer_inputs)
+    out = tokenizer(fold_input)
+    out = out[ENCODER_OUT]
+    # Then unfold batch- and time-dimensions again.
+    unfold_output = unfold(out)
+    return unfold_output
+    # return unfold(out)
+```
+
+Change class `TorchLSTMEncoder` in `/python3.10/site-packages/ray/rllib/core/models/torch/encoder.py`:
+
+```
+    def __init__(self, config: RecurrentEncoderConfig) -> None:
+        TorchModel.__init__(self, config)
+
+        # Maybe create a tokenizer
+        # if config.tokenizer_config is not None:
+        #     self.tokenizer = config.tokenizer_config.build(framework="torch")
+        #     lstm_input_dims = config.tokenizer_config.output_dims
+        # else:
+        #     self.tokenizer = None
+        #     lstm_input_dims = config.input_dims
+        self.tokenizer = None
+        lstm_input_dims = (config.tokenizer_config.input_dims,)
+```
+
+
+
+
+
+
+
 
 
