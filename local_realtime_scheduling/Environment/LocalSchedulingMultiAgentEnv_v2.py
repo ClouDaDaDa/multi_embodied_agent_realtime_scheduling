@@ -487,6 +487,8 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
             if agent_id != self.current_actor:
                 raise ValueError(f"The agent_id {agent_id} mismatch current_actor{self.current_actor}!")
 
+            action = int(action)
+
             if agent_id.startswith("machine"):
                 machine_index = int(agent_id.lstrip("machine"))
                 current_machine = self.factory_instance.machines[machine_index]
@@ -503,7 +505,7 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                 # perform maintenance
                 elif self.num_jobs <= action < self.num_jobs + 4:
                     # Check the validity of the maintenance action
-                    maintenance_method = action - self.num_jobs
+                    maintenance_method = int(action) - self.num_jobs
                     self._check_machine_maintenance_action(machine_index=machine_index,
                                                            maintenance_method=maintenance_method)
 

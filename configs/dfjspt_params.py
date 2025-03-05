@@ -4,6 +4,7 @@ time_window_size = 200
 current_window = 0
 
 # training params
+use_lstm = True
 as_test = False
 framework = "torch"
 local_mode = False

@@ -46,13 +46,22 @@ if __name__ == "__main__":
     example_env = LocalSchedulingMultiAgentEnv(env_config)
     example_env.reset()
 
-    train_batch_size = 2 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
+    train_batch_size = 4 * (example_env.num_machines + example_env.num_transbots) * int(example_env.time_upper_bound)
+
+    model_config = {}
+    if dfjspt_params.use_lstm:
+        model_config = {
+            "vf_share_layers": False,
+            "use_lstm": True,
+            "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 5,
+        }
 
     base_config = (
         PPOConfig()
         .environment(
             env=LocalSchedulingMultiAgentEnv,
             env_config=env_config,
+            disable_env_checking=True,
         )
         .env_runners(
             num_env_runners=0,
@@ -111,21 +120,13 @@ if __name__ == "__main__":
                         module_class=ActionMaskingTorchRLModule,
                         observation_space=example_env.observation_spaces[example_env.machine_agents[0]],
                         action_space=example_env.action_spaces[example_env.machine_agents[0]],
-                        model_config={
-                            "vf_share_layers": False,
-                            "use_lstm": True,
-                            "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 5,
-                        },
+                        model_config=model_config,
                     ),
                     "p_transbot": RLModuleSpec(
                         module_class=ActionMaskingTorchRLModule,
                         observation_space=example_env.observation_spaces[example_env.transbot_agents[0]],
                         action_space=example_env.action_spaces[example_env.transbot_agents[0]],
-                        model_config={
-                            "vf_share_layers": False,
-                            "use_lstm": True,
-                            "max_seq_len": (example_env.num_machines + example_env.num_transbots) * 5,
-                        },
+                        model_config=model_config,
                     ),
                 },
             ),

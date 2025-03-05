@@ -11,6 +11,8 @@ from ray.rllib.utils.torch_utils import FLOAT_MIN
 from ray.rllib.utils.typing import TensorType
 from ray.rllib.core.rl_module.default_model_config import DefaultModelConfig
 
+from configs import dfjspt_params
+
 torch, nn = try_import_torch()
 
 
@@ -189,7 +191,10 @@ class ActionMaskingTorchRLModule(ActionMaskingRLModule, PPOTorchRLModule):
             for key, value in observation.items():
                 # If value is a tensor, flatten it
                 if isinstance(value, torch.Tensor):
-                    flattened_obs_parts.append(value.flatten(start_dim=2))
+                    if dfjspt_params.use_lstm:
+                        flattened_obs_parts.append(value.flatten(start_dim=2))
+                    else:
+                        flattened_obs_parts.append(value.flatten(start_dim=1))
                 else:
                     # Handle other cases, such as if value is a different type
                     raise ValueError(f"Unexpected value type in observation: {type(value)} for key {key}")
