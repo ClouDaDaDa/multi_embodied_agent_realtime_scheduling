@@ -11,7 +11,7 @@ local_mode = False
 use_tune = True
 use_custom_loss = True
 il_loss_weight = 10.0
-stop_iters = 5000
+stop_iters = 200
 stop_timesteps = 100000000000
 stop_reward = 2
 
