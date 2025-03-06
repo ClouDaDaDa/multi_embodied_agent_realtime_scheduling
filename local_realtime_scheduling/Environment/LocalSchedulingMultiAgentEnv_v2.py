@@ -1522,10 +1522,11 @@ class LocalSchedulingMultiAgentEnv(MultiAgentEnv):
                                                     interval=1000 / self.metadata["render_fps"], blit=False)
 
     def close(self):
-        if self.fig is not None:
-            plt.close(self.fig)
-            self.fig = None
-            plt.ioff()
+        if self.render_mode is not None:
+            if self.fig is not None:
+                plt.close(self.fig)
+                self.fig = None
+                plt.ioff()
 
 
     def _plot_static_elements(self):
